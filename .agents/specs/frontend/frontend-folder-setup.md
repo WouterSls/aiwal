@@ -45,8 +45,6 @@ npx create-next-app@latest frontend \
   --tailwind \
   --src-dir \
   --import-alias "@/*" \
-  --no-eslint \
-  --no-turbopack
 ```
 
 Flags explained:
@@ -56,8 +54,6 @@ Flags explained:
 - `--tailwind` — Tailwind CSS pre-configured
 - `--src-dir` — puts code under `frontend/src/`
 - `--import-alias "@/*"` — clean imports (`@/components/header`)
-- `--no-eslint` — skip ESLint for MVP speed
-- `--no-turbopack` — use webpack (Turbopack still experimental in 16)
 
 ### Post-Scaffold Steps
 
@@ -78,7 +74,11 @@ Flags explained:
 
 3. Install Dynamic SDK:
 
-refer to `.agents/skills/dynamic-wallet` for setup
+   ```bash
+   npm install @dynamic-labs/sdk-api@0.0.924 @dynamic-labs/sdk-evm@0.23.2
+   ```
+
+   Refer to `.agents/skills/dynamic-wallet` for additional setup.
 
 4. Create `.env.local`:
    ```bash
@@ -93,12 +93,12 @@ refer to `.agents/skills/dynamic-wallet` for setup
 frontend/
 ├── src/
 │   ├── app/
-│   │   ├── layout.ts             # Root layout, providers (QueryClient, Dynamic)
-│   │   ├── page.ts               # Landing / login
+│   │   ├── layout.tsx            # Root layout, providers (QueryClient, Dynamic)
+│   │   ├── page.tsx              # Landing / login
 │   │   ├── onboard/
-│   │   │   └── page.ts           # Preset selection
+│   │   │   └── page.tsx          # Preset selection
 │   │   └── dashboard/
-│   │       └── page.ts           # Main trading interface
+│   │       └── page.tsx          # Main trading interface
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui components (button, dialog, input, etc.)
 │   │   ├── header.tsx
@@ -110,7 +110,8 @@ frontend/
 ├── public/                       # Static assets (logo, icons)
 ├── .env.local                    # Local env vars (git-ignored)
 ├── tsconfig.json                 # Path aliases
-├── next.config.mjs               # Next.js config
+├── components.json               # shadcn/ui config
+├── next.config.ts                # Next.js config
 ├── tailwind.config.js            # Tailwind config
 ├── postcss.config.mjs            # PostCSS config
 └── package.json
@@ -118,7 +119,7 @@ frontend/
 
 ### Conventions
 
-- **Pages** use `.ts` extension (Next.js App Router)
+- **Pages and layouts** use `.tsx` extension (they return JSX)
 - **Components** use `.tsx` extension
 - **Lib files** use `.ts` extension
 - **Import alias:** `@/components/header` resolves to `src/components/header.tsx`
@@ -178,13 +179,13 @@ frontend/out/
 
 ### Production
 
-| Package                        | Purpose                   |
-| ------------------------------ | ------------------------- |
-| `next` (16.x)                  | Framework                 |
-| `react`, `react-dom`           | UI library                |
-| `@tanstack/react-query`        | Server state management   |
-| `@dynamic-labs/sdk-react-core` | Auth SDK                  |
-| `@dynamic-labs/ethereum`       | Ethereum wallet connector |
+| Package                           | Purpose                 |
+| --------------------------------- | ----------------------- |
+| `next` (16.2.x)                   | Framework               |
+| `react`, `react-dom`              | UI library              |
+| `@tanstack/react-query`           | Server state management |
+| `@dynamic-labs/sdk-api` (0.0.924) | Auth SDK                |
+| `@dynamic-labs-sdk/evm` (0.23.2)  | EVM wallet connector    |
 
 ### Dev
 
