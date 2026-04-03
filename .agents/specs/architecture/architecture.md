@@ -222,11 +222,70 @@ Executes swaps on Base via the Uniswap API.
 
 **Token scope:** Any token available on Uniswap Base pools. No whitelist restriction for MVP.
 
-#### 2.5 Dynamic SDK (Server-side)
+#### 2.5 Dynamic SDK — Delegated Access
 
-- Manages embedded wallets with delegated access
-- Server holds delegated signing authority for autonomous execution (CRE-triggered orders)
-- User retains full ownership; delegation is scoped
+Dynamic uses MPC (multi-party computation) embedded wallets. Delegation lets the server sign transactions on behalf of the user without holding the full private key.
+
+**Packages:**
+- `@dynamic-labs-sdk/client` + `@dynamic-labs-sdk/client/waas` — client-side (Next.js)
+- `@dynamic-labs-wallet/node` — server-side decryption
+- `@dynamic-labs-wallet/node-evm` — server-side EVM signing
+
+**Client-side (lazy trigger — first trade confirmation):**
+
+```ts
+import { getWalletAccounts } from '@dynamic-labs-sdk/client';
+import { hasDelegatedAccess, delegateWaasKeyShares } from '@dynamic-labs-sdk/client/waas';
+
+const walletAccount = getWalletAccounts()[0];
+if (!hasDelegatedAccess({ walletAccount })) {
+  await delegateWaasKeyShares({ walletAccount });
+}
+```
+
+Called once — before the first `POST /api/orders/:id/confirm`. If delegation already exists (`hasDelegatedAccess` returns true), skip.
+
+**Server-side webhook flow (`POST /api/webhooks/dynamic`):**
+
+1. Verify HMAC-SHA256 signature via `x-dynamic-signature-256` header
+2. Decrypt materials using `decryptDelegatedWebhookData` from `@dynamic-labs-wallet/node`
+3. Encrypt `decryptedDelegatedShare` and `decryptedWalletApiKey` at rest (AES-256 with `DELEGATION_ENCRYPTION_KEY`)
+4. Upsert into `delegations` table (keyed on `user_id`)
+
+```ts
+import { decryptDelegatedWebhookData } from '@dynamic-labs-wallet/node';
+
+const { decryptedDelegatedShare, decryptedWalletApiKey } =
+  decryptDelegatedWebhookData({
+    privateKeyPem: process.env.DYNAMIC_RSA_PRIVATE_KEY,
+    encryptedDelegatedKeyShare: webhookData.data.encryptedDelegatedShare,
+    encryptedWalletApiKey: webhookData.data.encryptedWalletApiKey,
+  });
+```
+
+**Server-side signing (ExecutionModule):**
+
+```ts
+import { createDelegatedEvmWalletClient } from '@dynamic-labs-wallet/node-evm';
+
+const client = createDelegatedEvmWalletClient({
+  environmentId: process.env.DYNAMIC_ENVIRONMENT_ID,
+  apiKey: process.env.DYNAMIC_API_KEY,
+});
+
+// walletApiKey and keyShare are decrypted from DB at execution time
+const signature = await client.signTransaction({
+  walletId,
+  walletApiKey,
+  keyShare,
+  transaction,
+});
+```
+
+**Security:**
+- Webhook endpoint has no JWT auth — uses HMAC-SHA256 verification only
+- Delegation materials encrypted at rest before DB storage
+- No plaintext key material ever stored
 
 #### 2.6 ChatModule — WebSocket Gateway
 
@@ -245,25 +304,28 @@ WalletModule → PriceFeedModule → OrdersModule → ExecutionModule → AgentM
 ### Relationships
 
 ```
-users 1──∞ proposals 1──1 delegations
-                     1──∞ orders
+users 1──∞ proposals 1──∞ orders
 ```
 
 - A user has many proposals
-- A proposal has exactly one delegation
 - A proposal has many orders
+- Delegation materials stored directly on the user row (no separate table)
 
 ### Tables
 
 ```sql
--- Users: Dynamic login identity
+-- Users: Dynamic login identity + delegated signing authority
 users (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  dynamic_id      TEXT UNIQUE NOT NULL,
-  wallet_address  TEXT NOT NULL,
-  email           TEXT,                      -- from Dynamic SDK (optional)
-  preset          TEXT NOT NULL,             -- 'institutional' | 'degen'
-  created_at      TIMESTAMP DEFAULT NOW()
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dynamic_id          TEXT UNIQUE NOT NULL,
+  wallet_address      TEXT NOT NULL,
+  email               TEXT,                     -- from Dynamic SDK (optional)
+  preset              TEXT NOT NULL,            -- 'institutional' | 'degen'
+  dynamic_wallet_id   TEXT,                     -- Dynamic walletId from delegation webhook (null until first trade)
+  delegated_share     TEXT,                     -- AES-256 encrypted ServerKeyShare JSON (null until delegated)
+  wallet_api_key      TEXT,                     -- AES-256 encrypted wallet API key (null until delegated)
+  delegation_active   BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at          TIMESTAMP DEFAULT NOW()
 )
 
 -- Proposals: parsed Claude AI transaction proposals
@@ -283,17 +345,6 @@ proposals (
   updated_at      TIMESTAMP DEFAULT NOW()
 )
 
--- Delegations: Dynamic SDK delegated signing authority (1:1 with proposal)
-delegations (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  proposal_id     UUID UNIQUE NOT NULL REFERENCES proposals(id),
-  user_id         UUID NOT NULL REFERENCES users(id),
-  delegation_data TEXT,                      -- JSON: Dynamic SDK delegation payload (TBD)
-  active          BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at      TIMESTAMP DEFAULT NOW(),
-  revoked_at      TIMESTAMP
-)
-
 -- Orders: Uniswap API swap executions linked to a proposal
 orders (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -308,12 +359,12 @@ orders (
 ### Lifecycle
 
 ```
+User.delegation_active: false → true (lazy — set on first trade confirmation via webhook)
 Proposal: confirmed → completed (all orders done) / failed
-Delegation: active → revoked (when proposal completes/fails)
 Order: pending → executing → completed / failed
 ```
 
-When all orders under a proposal reach a terminal state, the proposal status updates accordingly and the linked delegation is revoked.
+When all orders under a proposal reach a terminal state, the proposal status updates accordingly.
 
 ---
 
@@ -331,8 +382,9 @@ When all orders under a proposal reach a terminal state, the proposal status upd
 | GET    | `/api/orders`             | List user's orders                       |
 | POST   | `/api/orders`             | Create order (from confirmed proposal)   |
 | DELETE | `/api/orders/:id`         | Cancel an order                          |
-| POST   | `/api/orders/:id/confirm` | Confirm and execute a proposal           |
+| POST   | `/api/orders/:id/confirm` | Trigger delegation (if needed) + execute |
 | GET    | `/api/prices`             | Current Chainlink price feeds            |
+| POST   | `/api/webhooks/dynamic`   | Receive Dynamic delegation webhook (no JWT — HMAC-SHA256 only) |
 
 ---
 
@@ -348,7 +400,14 @@ When all orders under a proposal reach a terminal state, the proposal status upd
 7. Backend issues JWT containing { sub, dynamicId, walletAddress }
 8. Frontend stores JWT, sends as Bearer token with all subsequent API calls
 9. JwtAuthGuard validates JWT on every request (no Dynamic API call needed)
-10. Delegated access granted to backend for autonomous execution
+
+**Delegation (lazy — triggered on first trade confirmation):**
+
+10. Frontend checks `hasDelegatedAccess({ walletAccount })`
+11. If not delegated: calls `delegateWaasKeyShares({ walletAccount })` — Dynamic sends `wallet.delegation.created` webhook to backend
+12. Backend webhook handler: verifies HMAC-SHA256 → decrypts materials → encrypts at rest → upserts into `delegations` table
+13. Frontend polls or awaits confirmation, then proceeds with `POST /api/orders/:id/confirm`
+14. All subsequent trades reuse the stored delegation (step 10 short-circuits)
 ```
 
 ---
@@ -409,6 +468,9 @@ aiwal/
 CLAUDE_API_KEY=
 DYNAMIC_API_KEY=
 DYNAMIC_ENVIRONMENT_ID=
+DYNAMIC_WEBHOOK_SECRET=    # HMAC-SHA256 secret for webhook verification
+DYNAMIC_RSA_PRIVATE_KEY=   # RSA private key for decrypting delegation materials
+DELEGATION_ENCRYPTION_KEY= # AES-256 key for at-rest encryption of delegation data
 JWT_SECRET=                # Secret for signing JWTs
 JWT_EXPIRATION=4h          # JWT token TTL
 CHAINLINK_CRE_*=          # TBD based on integration
@@ -426,4 +488,6 @@ FRONTEND_URL=              # For CORS
 - [ ] Styling framework — Tailwind vs other
 - [ ] WebSocket vs SSE for streaming responses
 - [ ] Rate limiting / security hardening for API
-- [ ] Delegated access scope + transaction limits per preset
+- [ ] Styling framework — Tailwind vs other
+- [ ] WebSocket vs SSE for streaming responses
+- [ ] Rate limiting / security hardening for API
