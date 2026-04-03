@@ -1,6 +1,6 @@
 ---
 name: dynamic-wallet-knowledge
-description: Use to gain knowledge over Dynamic Wallet Toolkit, run everything dynamic wallet knowledge is needed or requested
+description: Use to gain knowledge over Dynamic Wallet Toolkit. Run everytime dynamic wallet knowledge is needed or requested. On keywords like "wallet delegation", "embedded wallet", "wallet interactoin"
 ---
 
 # Dynamic Wallet
