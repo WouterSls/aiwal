@@ -1,7 +1,7 @@
 {
   "name": "aiwal",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "workspaces": [
     "frontend",
     "backend"
