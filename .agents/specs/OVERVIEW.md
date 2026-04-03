@@ -5,7 +5,16 @@
 | Spec | Status | Description |
 |------|--------|-------------|
 | [architecture.md](architecture/architecture.md) | NOT DONE | System architecture — frontend, backend, modules, deployment |
+| [backend-core-modules.md](architecture/backend-core-modules.md) | NOT DONE | Backend module map — AppModule wiring, auth flow, design order |
 | [persistence-layer.md](architecture/persistence-layer.md) | NOT DONE | Database schema — users, proposals, delegations, orders (TypeORM/SQLite) |
+
+## Backend Modules
+
+| Spec | Status | Description |
+|------|--------|-------------|
+| [common-module.md](backend/common-module.md) | NOT DONE | CommonModule — guards, decorators, DTOs, interceptors, error handling |
+| [auth-module.md](backend/auth-module.md) | NOT DONE | AuthModule — Dynamic SDK session validation, JWT issuance, global AuthGuard |
+| [users-module.md](backend/users-module.md) | NOT DONE | UsersModule — user CRUD, preset management, wallet mapping, abstract repository |
 
 ## Frontend
 
