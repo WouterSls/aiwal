@@ -24,7 +24,7 @@ Define the frontend page structure, component hierarchy, state management, real-
 | Components | shadcn/ui (Radix primitives) |
 | Auth | Dynamic SDK (client-side) |
 | Server state | React Query (`@tanstack/react-query`) |
-| Real-time | WebSocket (streaming Claude responses, order status) |
+| AI | Claude API (direct from frontend, streaming) |
 | Theme | Light mode only |
 | Responsiveness | Desktop only (no mobile) |
 
@@ -118,8 +118,8 @@ Core page. Split layout with contextual left panel and chat on the right.
 ### Right Panel — Chat
 - `ChatPanel` — message list + input
 - `MessageBubble` — single message (user or agent)
-  - Agent messages stream in via WebSocket
-  - If agent response contains a transaction proposal JSON → left panel switches to `ProposalEditor`
+  - Agent messages stream in via Claude API (frontend-direct)
+  - On stream complete: parsed for proposal JSON → if present, left panel switches to `ProposalEditor`
 - `ChatInput` — text input + send button
 - Scroll: auto-scroll to bottom on new messages, scroll lock when user scrolls up
 
@@ -144,43 +144,22 @@ Core page. Split layout with contextual left panel and chat on the right.
 | Key | Endpoint | Refetch |
 |-----|----------|---------|
 | `['portfolio']` | `GET /api/portfolio` | 30s interval |
-| `['prices']` | `GET /api/prices` | 30s interval |
-| `['orders']` | `GET /api/orders` | On mutation + WebSocket event |
+| `['prices']` | `GET /api/prices` | 30s interval + before each Claude call |
+| `['orders']` | `GET /api/orders` | On mutation |
 | `['user']` | `GET /api/auth/session` | On mount |
 
 ### Local State
 
 - `activeProposal` — the current proposal being edited (or `null` when showing portfolio)
-- `chatMessages` — array of messages (local + streamed)
-- `wsConnection` — WebSocket connection instance
+- `chatMessages` — array of messages (local + streamed from Claude API)
 
 ---
 
-## WebSocket
+## Integration Points
 
-Single WebSocket connection opened on `/chat` mount.
-
-**Events (server → client):**
-
-| Event | Payload | Action |
-|-------|---------|--------|
-| `agent:chunk` | `{ text: string }` | Append to current agent message (streaming) |
-| `agent:done` | `{ message: string, proposal?: Proposal }` | Finalize message, if proposal present → set `activeProposal` |
-| `order:status` | `{ orderId, status }` | Invalidate `['orders']` query |
-
-**Events (client → server):**
-
-| Event | Payload | Action |
-|-------|---------|--------|
-| `chat:message` | `{ text: string }` | Send user message to agent |
-
----
-
-## API Integration
-
-All REST calls go through React Query. Base URL from `NEXT_PUBLIC_API_URL` env var.
-
-Auth: Dynamic SDK session token sent as `Authorization: Bearer <token>` header on all requests.
+- **Claude API** — called directly from the frontend (streaming). Context assembly, prompt construction, and response parsing defined in [claude-interaction spec](../llm-context-integration/claude-interaction.md).
+- **Backend REST API** — React Query for portfolio, prices, orders, auth. Base URL from `NEXT_PUBLIC_API_URL` env var. Auth via Dynamic SDK session token as `Authorization: Bearer <token>`.
+- **Dynamic SDK** — client-side auth provider, embedded wallet creation.
 
 ---
 
@@ -210,7 +189,7 @@ apps/web/
 │   └── preset-card.tsx
 ├── lib/
 │   ├── api.ts                  # React Query hooks (usePortfolio, usePrices, etc.)
-│   ├── ws.ts                   # WebSocket connection + event handlers
+│   ├── claude.ts               # Claude API client + streaming (see claude-interaction spec)
 │   └── dynamic.ts              # Dynamic SDK config
 ├── package.json
 └── tailwind.config.ts
@@ -229,9 +208,7 @@ apps/web/
 - [ ] Build chat page layout (50/50 split + below fold)
 - [ ] Build `PortfolioView` + `TokenRow` with React Query polling
 - [ ] Build `ChatPanel` + `MessageBubble` + `ChatInput`
-- [ ] Implement WebSocket connection + streaming message display
 - [ ] Build `ProposalEditor` with editable fields
-- [ ] Wire proposal detection (agent response → switch left panel)
 - [ ] Build `ConfirmationModal` with confirm/cancel actions
 - [ ] Build `ProposalsHistory` + `ProposalRow` table
 - [ ] Connect all API endpoints via React Query hooks in `lib/api.ts`
