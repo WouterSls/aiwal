@@ -2,6 +2,10 @@
 
 Aiwal (AI Wallet) is the next generation of AI wallet. Created to facilitate onchain trading and liquidity automation.
 
+## Codebase info
+
+`.agents/specs/OVERVIEW.md` is an overview file which serves as a context hook to specifications
+
 ## Codebase patterns
 
 - All code that's generated should focus on human readability and simplicity.
