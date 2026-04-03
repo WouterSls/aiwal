@@ -82,3 +82,8 @@ Specs also define the tasks that are required inorder for the spec to be done.
 The `OVERVIEW.md` file acts as a context hook. Giving an overview of all existing JTBD and specs that exists.
 
 It also indicates the status of the spec, DONE or NOT DONE.
+
+### Step 6. Validation
+
+- [] User interviewed with questions
+- [] [SPEC].md created in `.agents/specs/[JTBD]`.
