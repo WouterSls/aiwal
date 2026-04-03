@@ -1,7 +1,7 @@
 ---
 name: specs-creator
 description: Used to create new markdown specs in the specs folder. specs are specifications specifically written for an agent to analyze. Run everytime creating a new spec is prompted. Run on keywords "create specification", "create spec"
-model: opus
+model: sonnet
 ---
 
 # Specs Creator
