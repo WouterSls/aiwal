@@ -57,9 +57,11 @@
 ## 1. Frontend — Next.js (Vercel)
 
 ### Purpose
+
 Serves the user-facing UI: chat interface, portfolio view, and transaction confirmation.
 
 ### Tech
+
 - **Framework:** Next.js (App Router)
 - **Hosting:** Vercel
 - **Styling:** TBD (Tailwind recommended for speed)
@@ -67,13 +69,14 @@ Serves the user-facing UI: chat interface, portfolio view, and transaction confi
 
 ### Pages / Views
 
-| Route            | Description                                      |
-| ---------------- | ------------------------------------------------ |
-| `/`              | Landing / login via Dynamic                      |
-| `/onboard`       | One-time agent preset selection (Institutional / Degen) |
-| `/chat`          | Main chat interface + portfolio sidebar          |
+| Route      | Description                                             |
+| ---------- | ------------------------------------------------------- |
+| `/`        | Landing / login via Dynamic                             |
+| `/onboard` | One-time agent preset selection (Institutional / Degen) |
+| `/chat`    | Main chat interface + portfolio sidebar                 |
 
 ### Communication with Backend
+
 - REST API calls for: sending prompts, fetching portfolio, managing orders
 - WebSocket (or SSE) for: streaming Claude responses, real-time order status updates
 
@@ -82,14 +85,16 @@ Serves the user-facing UI: chat interface, portfolio view, and transaction confi
 ## 2. Backend — Express (Self-hosted VPS)
 
 ### Purpose
+
 Long-running process that handles AI reasoning, order management, Chainlink signal listening, and on-chain execution.
 
 ### Tech
+
 - **Runtime:** Node.js
-- **Framework:** Express
+- **Framework:** NestJS
 - **Language:** TypeScript
 - **Database:** SQLite (dev) / Postgres (prod)
-- **ORM:** Drizzle or Prisma (TBD)
+- **ORM:** TypeORM
 
 ### Core Modules
 
@@ -98,6 +103,7 @@ Long-running process that handles AI reasoning, order management, Chainlink sign
 The agent uses context injection rather than tool use. On each user message, the backend assembles a context bundle and sends it to Claude.
 
 **System prompt structure:**
+
 ```
 [Trading Profile]
 Preset: Degen
@@ -143,6 +149,7 @@ Transaction proposal format:
 ```
 
 **Flow:**
+
 1. User sends message via frontend
 2. Backend fetches: wallet balances, open orders, latest Chainlink feeds
 3. Backend assembles system prompt + user message
@@ -155,14 +162,15 @@ Transaction proposal format:
 Manages all order types and their lifecycle.
 
 **Order types:**
-| Type         | Trigger                          | Execution                  |
+| Type | Trigger | Execution |
 | ------------ | -------------------------------- | -------------------------- |
-| Market Swap  | Immediate (user confirms)        | Uniswap swap               |
-| Limit Order  | Price reaches target             | Uniswap swap via CRE signal|
-| Stop Loss    | Price drops below threshold      | Uniswap swap via CRE signal|
-| Take Profit  | Price rises above threshold      | Uniswap swap via CRE signal|
+| Market Swap | Immediate (user confirms) | Uniswap swap |
+| Limit Order | Price reaches target | Uniswap swap via CRE signal|
+| Stop Loss | Price drops below threshold | Uniswap swap via CRE signal|
+| Take Profit | Price rises above threshold | Uniswap swap via CRE signal|
 
 **Order lifecycle:**
+
 ```
 CREATED → PENDING → TRIGGERED → EXECUTING → COMPLETED
                                           → FAILED
@@ -178,6 +186,7 @@ CREATED → PENDING → TRIGGERED → EXECUTING → COMPLETED
 **Most likely approach:** CRE workflows that monitor price feeds and trigger callbacks when order conditions are met.
 
 **Possible patterns:**
+
 1. CRE pushes event/webhook to Express backend → backend executes order
 2. CRE triggers on-chain function directly → smart contract executes swap
 3. Backend polls CRE feeds on interval → checks order conditions locally
@@ -185,6 +194,7 @@ CREATED → PENDING → TRIGGERED → EXECUTING → COMPLETED
 **For MVP:** Start with pattern 3 (polling) as fallback if CRE webhook setup is complex. Upgrade to pattern 1 for the demo.
 
 **Data consumed:**
+
 - Real-time price feeds (ETH/USD, BTC/USD, token/USD for any Uniswap-listed asset)
 - Price change signals (% thresholds)
 - Custom conditions defined per order
@@ -194,12 +204,14 @@ CREATED → PENDING → TRIGGERED → EXECUTING → COMPLETED
 Executes swaps on Base via the Uniswap API.
 
 **Capabilities:**
+
 - Route finding (optimal path across pools)
 - Slippage estimation
 - Gas estimation
 - Swap execution via the embedded wallet's delegated access
 
 **Flow:**
+
 1. Receive swap params (token_in, token_out, amount, slippage)
 2. Call Uniswap API for quote + route
 3. Build transaction
@@ -220,42 +232,59 @@ Executes swaps on Base via the Uniswap API.
 
 ## 3. Database Schema (MVP)
 
+> Full spec: `.agents/specs/architecture/persistence-layer.md`
+
+```
+users 1──∞ proposals 1──1 delegations
+                     1──∞ orders
+```
+
 ```sql
--- Users
+-- Users: Dynamic login identity
 users (
-  id            TEXT PRIMARY KEY,
-  dynamic_id    TEXT UNIQUE,         -- Dynamic SDK user ID
-  wallet_address TEXT,               -- Embedded wallet address on Base
-  preset        TEXT,                -- 'institutional' | 'degen'
-  created_at    TIMESTAMP
+  id              UUID PRIMARY KEY,
+  dynamic_id      TEXT UNIQUE NOT NULL,
+  wallet_address  TEXT NOT NULL,
+  preset          TEXT NOT NULL,            -- 'institutional' | 'degen'
+  created_at      TIMESTAMP
 )
 
--- Orders
+-- Proposals: parsed Claude AI transaction proposals
+proposals (
+  id              UUID PRIMARY KEY,
+  user_id         UUID NOT NULL REFERENCES users(id),
+  type            TEXT NOT NULL,            -- 'market' | 'limit' | 'stop_loss' | 'take_profit'
+  action          TEXT NOT NULL,            -- 'buy' | 'sell'
+  token_in        TEXT NOT NULL,
+  token_out       TEXT NOT NULL,
+  amount_in       TEXT NOT NULL,
+  expected_out    TEXT,
+  slippage        TEXT,
+  condition       TEXT,                     -- JSON: price condition for limit/SL/TP
+  status          TEXT NOT NULL DEFAULT 'confirmed',  -- 'confirmed' | 'completed' | 'failed'
+  created_at      TIMESTAMP,
+  updated_at      TIMESTAMP
+)
+
+-- Delegations: Dynamic SDK delegated signing (1:1 with proposal)
+delegations (
+  id              UUID PRIMARY KEY,
+  proposal_id     UUID UNIQUE NOT NULL REFERENCES proposals(id),
+  user_id         UUID NOT NULL REFERENCES users(id),
+  delegation_data TEXT,                     -- JSON: Dynamic SDK payload (TBD)
+  active          BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMP,
+  revoked_at      TIMESTAMP
+)
+
+-- Orders: Uniswap swap executions linked to a proposal
 orders (
-  id            TEXT PRIMARY KEY,
-  user_id       TEXT REFERENCES users(id),
-  type          TEXT,                -- 'market' | 'limit' | 'stop_loss' | 'take_profit'
-  action        TEXT,                -- 'buy' | 'sell'
-  token_in      TEXT,
-  token_out     TEXT,
-  amount_in     TEXT,                -- stored as string for precision
-  expected_out  TEXT,
-  condition     TEXT,                -- JSON: price condition for non-market orders
-  slippage      TEXT,
-  status        TEXT,                -- 'created' | 'pending' | 'triggered' | 'executing' | 'completed' | 'failed' | 'cancelled'
-  tx_hash       TEXT,
-  created_at    TIMESTAMP,
-  updated_at    TIMESTAMP
-)
-
--- Chat history (for context continuity)
-messages (
-  id            TEXT PRIMARY KEY,
-  user_id       TEXT REFERENCES users(id),
-  role          TEXT,                -- 'user' | 'assistant'
-  content       TEXT,
-  proposal      TEXT,                -- JSON: transaction proposal if present
-  created_at    TIMESTAMP
+  id              UUID PRIMARY KEY,
+  proposal_id     UUID NOT NULL REFERENCES proposals(id),
+  tx_hash         TEXT,
+  status          TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'executing' | 'completed' | 'failed'
+  created_at      TIMESTAMP,
+  updated_at      TIMESTAMP
 )
 ```
 
@@ -265,16 +294,16 @@ messages (
 
 ### Express Backend API
 
-| Method | Route                    | Description                        |
-| ------ | ------------------------ | ---------------------------------- |
-| POST   | `/api/chat`              | Send message, get agent response   |
-| GET    | `/api/portfolio`         | Wallet balances + token values     |
-| GET    | `/api/orders`            | List user's orders                 |
-| POST   | `/api/orders`            | Create order (from confirmed proposal) |
-| DELETE | `/api/orders/:id`        | Cancel an order                    |
-| POST   | `/api/orders/:id/confirm`| Confirm and execute a proposal     |
-| GET    | `/api/prices`            | Current Chainlink price feeds      |
-| POST   | `/api/auth/session`      | Validate Dynamic session           |
+| Method | Route                     | Description                            |
+| ------ | ------------------------- | -------------------------------------- |
+| POST   | `/api/chat`               | Send message, get agent response       |
+| GET    | `/api/portfolio`          | Wallet balances + token values         |
+| GET    | `/api/orders`             | List user's orders                     |
+| POST   | `/api/orders`             | Create order (from confirmed proposal) |
+| DELETE | `/api/orders/:id`         | Cancel an order                        |
+| POST   | `/api/orders/:id/confirm` | Confirm and execute a proposal         |
+| GET    | `/api/prices`             | Current Chainlink price feeds          |
+| POST   | `/api/auth/session`       | Validate Dynamic session               |
 
 ---
 
@@ -333,13 +362,14 @@ aiwal/
 
 ## 7. Deployment
 
-| Component  | Platform        | Notes                                    |
-| ---------- | --------------- | ---------------------------------------- |
-| Frontend   | Vercel          | Auto-deploy from main branch             |
-| Backend    | Self-hosted VPS | PM2 or Docker, persistent process needed |
-| Database   | VPS (SQLite)    | Same host as backend for MVP             |
+| Component | Platform        | Notes                                    |
+| --------- | --------------- | ---------------------------------------- |
+| Frontend  | Vercel          | Auto-deploy from main branch             |
+| Backend   | Self-hosted VPS | PM2 or Docker, persistent process needed |
+| Database  | VPS (SQLite)    | Same host as backend for MVP             |
 
 **Environment variables (backend):**
+
 ```
 CLAUDE_API_KEY=
 DYNAMIC_API_KEY=
@@ -356,7 +386,7 @@ FRONTEND_URL=              # For CORS
 ## 8. Open Items
 
 - [ ] Chainlink CRE integration pattern — webhook vs polling vs on-chain trigger
-- [ ] ORM choice — Drizzle vs Prisma
+- [x] ORM choice — TypeORM with SQLite (dev) / Postgres (prod)
 - [ ] Styling framework — Tailwind vs other
 - [ ] WebSocket vs SSE for streaming responses
 - [ ] Rate limiting / security hardening for API
