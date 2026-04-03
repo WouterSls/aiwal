@@ -294,3 +294,32 @@ Both fragments define: persona, tone, constraints, slippage, and token scope.
 - [ ] Integrate preset system prompt fragments into context assembler
 - [ ] Handle error states (rate limit, API errors, invalid JSON)
 - [ ] Add `NEXT_PUBLIC_ANTHROPIC_API_KEY` to Vercel env config
+
+---
+
+## ⚠️ Review Notes
+
+> These notes were flagged during spec review and should be addressed before or during implementation.
+
+### 🔴 Blockers
+
+- **CORS will block browser-to-Anthropic calls.** The Anthropic API does not set `Access-Control-Allow-Origin` for browser origins. Calling Claude directly from the frontend will fail. The Claude call **must** go through a server-side proxy (e.g., a Next.js API route at `/api/chat`). This also solves the API key exposure problem below.
+
+### 🟡 High Priority
+
+- **API key exposure.** `NEXT_PUBLIC_` env vars are bundled into the client-side JS and visible to anyone inspecting the page. Even for a hackathon demo, routing through a Next.js API route is minimal effort and eliminates this risk entirely.
+- **`max_tokens: 1024` may be too low.** A proposal JSON block alone can consume ~300 tokens. Combined with conversational text and reasoning, responses may get truncated. Consider raising to 2048.
+- **No schema validation on proposals.** `JSON.parse` + checking 5 field names exist doesn't catch invalid enum values (e.g., `type: "yolo"`). A lightweight Zod schema for `TransactionProposal` would prevent malformed proposals from reaching the confirmation modal.
+
+### 🟠 Medium Priority
+
+- **Stale balance race condition.** Portfolio and orders are refreshed every 30 seconds, but Claude could propose a trade based on a stale balance immediately after a confirmed swap. Consider forcing a re-fetch after every confirmed transaction before the next Claude call.
+- **Balance can change between proposal display and user confirm.** The frontend validates balances before showing the confirm button, but the balance may shift before the user clicks Confirm. The backend should re-validate balances on `POST /api/orders`.
+- **Message trimming strategy is underspecified.** Simple FIFO trimming of the 50-message cap could drop important early context (e.g., risk preferences stated in message 2). Consider keeping the first 2–3 messages plus the most recent N.
+- **No abort mechanism for in-flight streams.** If the user navigates away or sends a new message while Claude is still streaming, the spec doesn't define cleanup behavior. Use an `AbortController` to cancel the fetch on unmount or new message.
+
+### 🔵 Low Priority / Acceptable for MVP
+
+- **Regex-based JSON extraction is fragile.** If Claude nests a code block or produces malformed JSON, parsing silently falls back to informational. Acceptable for hackathon, but worth hardening later.
+- **No retry logic beyond a UI button.** Transient Claude API failures (5xx, network errors) only show a retry button with no automatic backoff. Fine for MVP.
+- **Preset prompt fragments are external dependencies.** The `{preset_system_prompt_fragment}` references `agent-presets/*.md` files — ensure these exist and are loaded correctly before the context assembler runs.
