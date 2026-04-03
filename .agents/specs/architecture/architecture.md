@@ -23,7 +23,7 @@
 └──────────────────┼───────────────────┘
                    │ REST / WebSocket
 ┌──────────────────▼───────────────────┐
-│         Express Backend              │
+│         NestJS Backend               │
 │         (Self-hosted VPS)            │
 │                                      │
 │  ┌─────────────┐  ┌──────────────┐   │
@@ -82,10 +82,9 @@ Serves the user-facing UI: chat interface, portfolio view, and transaction confi
 
 ---
 
-## 2. Backend — Express (Self-hosted VPS)
+## 2. Backend — NestJS (Self-hosted VPS)
 
 ### Purpose
-
 Long-running process that handles AI reasoning, order management, Chainlink signal listening, and on-chain execution.
 
 ### Tech
@@ -95,8 +94,12 @@ Long-running process that handles AI reasoning, order management, Chainlink sign
 - **Language:** TypeScript
 - **Database:** SQLite (dev) / Postgres (prod)
 - **ORM:** TypeORM
+- **Required packages:** `@nestjs/jwt`, `@nestjs/config`, `class-validator`, `class-transformer`
+- No `@nestjs/passport` — unnecessary for single-strategy auth
 
 ### Core Modules
+
+> Detail specs for implemented modules: [`backend-core-modules.md`](backend-core-modules.md)
 
 #### 2.1 AI Agent (Claude API — Context Injection)
 
@@ -179,15 +182,14 @@ CREATED → PENDING → TRIGGERED → EXECUTING → COMPLETED
 
 **Storage:** Orders stored in DB with: user ID, type, params, condition, status, timestamps, tx hash.
 
-#### 2.3 Chainlink CRE Integration
+#### 2.3 PriceFeedModule — Chainlink CRE Integration
 
 > ⚠️ **TBD — Integration pattern to be finalized.**
 
 **Most likely approach:** CRE workflows that monitor price feeds and trigger callbacks when order conditions are met.
 
 **Possible patterns:**
-
-1. CRE pushes event/webhook to Express backend → backend executes order
+1. CRE pushes event/webhook to NestJS backend → backend executes order
 2. CRE triggers on-chain function directly → smart contract executes swap
 3. Backend polls CRE feeds on interval → checks order conditions locally
 
@@ -199,19 +201,17 @@ CREATED → PENDING → TRIGGERED → EXECUTING → COMPLETED
 - Price change signals (% thresholds)
 - Custom conditions defined per order
 
-#### 2.4 Uniswap Execution Layer
+#### 2.4 ExecutionModule — Uniswap Execution Layer
 
 Executes swaps on Base via the Uniswap API.
 
 **Capabilities:**
-
 - Route finding (optimal path across pools)
 - Slippage estimation
 - Gas estimation
 - Swap execution via the embedded wallet's delegated access
 
 **Flow:**
-
 1. Receive swap params (token_in, token_out, amount, slippage)
 2. Call Uniswap API for quote + route
 3. Build transaction
@@ -228,82 +228,111 @@ Executes swaps on Base via the Uniswap API.
 - Server holds delegated signing authority for autonomous execution (CRE-triggered orders)
 - User retains full ownership; delegation is scoped
 
+#### 2.6 ChatModule — WebSocket Gateway
+
+Handles real-time communication between frontend and backend: streaming Claude responses and order status updates. Depends on AgentModule, OrdersModule.
+
+### Module Design Order
+
+```
+WalletModule → PriceFeedModule → OrdersModule → ExecutionModule → AgentModule → ChatModule
+```
+
 ---
 
 ## 3. Database Schema (MVP)
 
-> Full spec: `.agents/specs/architecture/persistence-layer.md`
+### Relationships
 
 ```
 users 1──∞ proposals 1──1 delegations
                      1──∞ orders
 ```
 
+- A user has many proposals
+- A proposal has exactly one delegation
+- A proposal has many orders
+
+### Tables
+
 ```sql
 -- Users: Dynamic login identity
 users (
-  id              UUID PRIMARY KEY,
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   dynamic_id      TEXT UNIQUE NOT NULL,
   wallet_address  TEXT NOT NULL,
-  preset          TEXT NOT NULL,            -- 'institutional' | 'degen'
-  created_at      TIMESTAMP
+  email           TEXT,                      -- from Dynamic SDK (optional)
+  preset          TEXT NOT NULL,             -- 'institutional' | 'degen'
+  created_at      TIMESTAMP DEFAULT NOW()
 )
 
 -- Proposals: parsed Claude AI transaction proposals
 proposals (
-  id              UUID PRIMARY KEY,
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES users(id),
-  type            TEXT NOT NULL,            -- 'market' | 'limit' | 'stop_loss' | 'take_profit'
-  action          TEXT NOT NULL,            -- 'buy' | 'sell'
+  type            TEXT NOT NULL,             -- 'market' | 'limit' | 'stop_loss' | 'take_profit'
+  action          TEXT NOT NULL,             -- 'buy' | 'sell'
   token_in        TEXT NOT NULL,
   token_out       TEXT NOT NULL,
-  amount_in       TEXT NOT NULL,
+  amount_in       TEXT NOT NULL,             -- string for precision
   expected_out    TEXT,
   slippage        TEXT,
-  condition       TEXT,                     -- JSON: price condition for limit/SL/TP
+  condition       TEXT,                      -- JSON: price condition for limit/SL/TP
   status          TEXT NOT NULL DEFAULT 'confirmed',  -- 'confirmed' | 'completed' | 'failed'
-  created_at      TIMESTAMP,
-  updated_at      TIMESTAMP
+  created_at      TIMESTAMP DEFAULT NOW(),
+  updated_at      TIMESTAMP DEFAULT NOW()
 )
 
--- Delegations: Dynamic SDK delegated signing (1:1 with proposal)
+-- Delegations: Dynamic SDK delegated signing authority (1:1 with proposal)
 delegations (
-  id              UUID PRIMARY KEY,
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   proposal_id     UUID UNIQUE NOT NULL REFERENCES proposals(id),
   user_id         UUID NOT NULL REFERENCES users(id),
-  delegation_data TEXT,                     -- JSON: Dynamic SDK payload (TBD)
+  delegation_data TEXT,                      -- JSON: Dynamic SDK delegation payload (TBD)
   active          BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at      TIMESTAMP,
+  created_at      TIMESTAMP DEFAULT NOW(),
   revoked_at      TIMESTAMP
 )
 
--- Orders: Uniswap swap executions linked to a proposal
+-- Orders: Uniswap API swap executions linked to a proposal
 orders (
-  id              UUID PRIMARY KEY,
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   proposal_id     UUID NOT NULL REFERENCES proposals(id),
   tx_hash         TEXT,
   status          TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'executing' | 'completed' | 'failed'
-  created_at      TIMESTAMP,
-  updated_at      TIMESTAMP
+  created_at      TIMESTAMP DEFAULT NOW(),
+  updated_at      TIMESTAMP DEFAULT NOW()
 )
 ```
+
+### Lifecycle
+
+```
+Proposal: confirmed → completed (all orders done) / failed
+Delegation: active → revoked (when proposal completes/fails)
+Order: pending → executing → completed / failed
+```
+
+When all orders under a proposal reach a terminal state, the proposal status updates accordingly and the linked delegation is revoked.
 
 ---
 
 ## 4. API Routes
 
-### Express Backend API
+### NestJS Backend API
 
-| Method | Route                     | Description                            |
-| ------ | ------------------------- | -------------------------------------- |
-| POST   | `/api/chat`               | Send message, get agent response       |
-| GET    | `/api/portfolio`          | Wallet balances + token values         |
-| GET    | `/api/orders`             | List user's orders                     |
-| POST   | `/api/orders`             | Create order (from confirmed proposal) |
-| DELETE | `/api/orders/:id`         | Cancel an order                        |
-| POST   | `/api/orders/:id/confirm` | Confirm and execute a proposal         |
-| GET    | `/api/prices`             | Current Chainlink price feeds          |
-| POST   | `/api/auth/session`       | Validate Dynamic session               |
+| Method | Route                     | Description                              |
+| ------ | ------------------------- | ---------------------------------------- |
+| POST   | `/api/auth/session`       | Validate Dynamic session, issue JWT      |
+| GET    | `/api/users/me`           | Get current authenticated user           |
+| PATCH  | `/api/users/me/preset`    | Update user's trading preset             |
+| POST   | `/api/chat`               | Send message, get agent response         |
+| GET    | `/api/portfolio`          | Wallet balances + token values           |
+| GET    | `/api/orders`             | List user's orders                       |
+| POST   | `/api/orders`             | Create order (from confirmed proposal)   |
+| DELETE | `/api/orders/:id`         | Cancel an order                          |
+| POST   | `/api/orders/:id/confirm` | Confirm and execute a proposal           |
+| GET    | `/api/prices`             | Current Chainlink price feeds            |
 
 ---
 
@@ -312,11 +341,14 @@ orders (
 ```
 1. User visits frontend → Dynamic SDK login (social / email)
 2. Dynamic creates embedded wallet on Base
-3. Frontend receives session token
-4. Frontend sends session token with all API calls
+3. Frontend receives Dynamic session token
+4. Frontend sends session token to POST /api/auth/session (one-time exchange)
 5. Backend validates session via Dynamic SDK (server-side)
-6. Backend stores user + wallet mapping in DB
-7. Delegated access granted to backend for autonomous execution
+6. Backend finds or creates user in DB (stores wallet mapping)
+7. Backend issues JWT containing { sub, dynamicId, walletAddress }
+8. Frontend stores JWT, sends as Bearer token with all subsequent API calls
+9. JwtAuthGuard validates JWT on every request (no Dynamic API call needed)
+10. Delegated access granted to backend for autonomous execution
 ```
 
 ---
@@ -335,16 +367,20 @@ aiwal/
 │   │   ├── lib/                # Client utilities
 │   │   └── package.json
 │   │
-│   └── server/                 # Express backend
+│   └── server/                 # NestJS backend
 │       ├── src/
-│       │   ├── index.ts        # Express app entry
-│       │   ├── routes/         # API route handlers
-│       │   ├── agent/          # Claude API integration + context builder
-│       │   ├── orders/         # Order engine + lifecycle
-│       │   ├── chainlink/      # CRE listener / poller
-│       │   ├── uniswap/        # Swap execution
-│       │   ├── auth/           # Dynamic SDK server-side
-│       │   └── db/             # Schema + migrations
+│       │   ├── main.ts         # NestJS bootstrap entry
+│       │   ├── app.module.ts   # Root module
+│       │   ├── common/         # CommonModule — guards, decorators, filters, interceptors
+│       │   ├── auth/           # AuthModule — Dynamic SDK, JWT, login
+│       │   ├── users/          # UsersModule — user CRUD, preset management
+│       │   ├── wallet/         # WalletModule — Dynamic embedded wallet ops
+│       │   ├── pricefeed/      # PriceFeedModule — Chainlink CRE price feeds
+│       │   ├── orders/         # OrdersModule — proposals, order lifecycle
+│       │   ├── execution/      # ExecutionModule — Uniswap swap execution
+│       │   ├── agent/          # AgentModule — Claude API, context injection
+│       │   ├── chat/           # ChatModule — WebSocket gateway, streaming
+│       │   └── db/             # TypeORM entities, migrations, config
 │       └── package.json
 │
 ├── packages/
@@ -362,18 +398,19 @@ aiwal/
 
 ## 7. Deployment
 
-| Component | Platform        | Notes                                    |
-| --------- | --------------- | ---------------------------------------- |
-| Frontend  | Vercel          | Auto-deploy from main branch             |
-| Backend   | Self-hosted VPS | PM2 or Docker, persistent process needed |
-| Database  | VPS (SQLite)    | Same host as backend for MVP             |
+| Component  | Platform        | Notes                                    |
+| ---------- | --------------- | ---------------------------------------- |
+| Frontend   | Vercel          | Auto-deploy from main branch             |
+| Backend    | Self-hosted VPS | PM2 or Docker, persistent process needed |
+| Database   | VPS (SQLite)    | Same host as backend for MVP             |
 
 **Environment variables (backend):**
-
 ```
 CLAUDE_API_KEY=
 DYNAMIC_API_KEY=
 DYNAMIC_ENVIRONMENT_ID=
+JWT_SECRET=                # Secret for signing JWTs
+JWT_EXPIRATION=4h          # JWT token TTL
 CHAINLINK_CRE_*=          # TBD based on integration
 UNISWAP_API_KEY=           # If required
 DATABASE_URL=
@@ -386,7 +423,6 @@ FRONTEND_URL=              # For CORS
 ## 8. Open Items
 
 - [ ] Chainlink CRE integration pattern — webhook vs polling vs on-chain trigger
-- [x] ORM choice — TypeORM with SQLite (dev) / Postgres (prod)
 - [ ] Styling framework — Tailwind vs other
 - [ ] WebSocket vs SSE for streaming responses
 - [ ] Rate limiting / security hardening for API
