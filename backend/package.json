@@ -10,7 +10,6 @@
     "start:prod": "node dist/main"
   },
   "dependencies": {
-    "@dynamic-labs-wallet/node": "^0.0.322",
     "@dynamic-labs-wallet/node-evm": "^0.0.322",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.0.0",
