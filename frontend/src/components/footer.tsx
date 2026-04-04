@@ -21,7 +21,7 @@ export function Footer() {
         {/** LEGAL LINKS */}
         <div className="mt-32 text-center">
           <div className="grid grid-cols-5 max-w-lg mx-auto text-sm">
-            <a href="https://github.com/aiwal">GitHub</a>
+            <a href="https://github.com/woutersls/aiwal">GitHub</a>
             <span>·</span>
             <a href="/terms">Terms of Service</a>
             <span>·</span>
