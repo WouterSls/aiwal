@@ -15,6 +15,7 @@
 | [common-module.md](backend/common-module.md) | NOT DONE | CommonModule — guards, decorators, DTOs, interceptors, error handling |
 | [auth-module.md](backend/auth-module.md) | NOT DONE | AuthModule — Dynamic SDK session validation, JWT issuance, global AuthGuard |
 | [users-module.md](backend/users-module.md) | NOT DONE | UsersModule — user CRUD, preset management, wallet mapping, abstract repository |
+| [wallet-module.md](backend/wallet-module.md) | NOT DONE | WalletModule — Dynamic delegation webhook, AES-256 at-rest encryption, delegation material access |
 
 ## Frontend
 

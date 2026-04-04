@@ -11,6 +11,7 @@
 | **CommonModule** | Shared infrastructure — guards, decorators, DTOs, interceptors, error handling | [`backend/common-module.md`](../backend/common-module.md) |
 | **AuthModule** | Dynamic SDK session validation, JWT issuance, global AuthGuard | [`backend/auth-module.md`](../backend/auth-module.md) |
 | **UsersModule** | User CRUD, preset management, wallet mapping, abstract repository pattern | [`backend/users-module.md`](../backend/users-module.md) |
+| **WalletModule** | Dynamic delegation webhook, AES-256 at-rest encryption, delegation material access for ExecutionModule | [`backend/wallet-module.md`](../backend/wallet-module.md) |
 
 ---
 
