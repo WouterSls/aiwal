@@ -17,24 +17,27 @@ Define the database schema, entity relationships, and TypeORM types for the pers
 ### Relationships
 
 ```
-users 1──∞ proposals 1──1 delegations
-                     1──∞ orders
+users 1──∞ proposals 1──∞ orders
 ```
 
 - A user has many proposals
-- A proposal has exactly one delegation
 - A proposal has many orders
+- Delegation materials are stored directly on the user row (1:1, no separate table)
 
 ### Tables
 
 ```sql
--- Users: Dynamic login identity
+-- Users: Dynamic login identity + delegated signing authority
 users (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  dynamic_id      TEXT UNIQUE NOT NULL,
-  wallet_address  TEXT NOT NULL,
-  preset          TEXT NOT NULL,            -- 'institutional' | 'degen'
-  created_at      TIMESTAMP DEFAULT NOW()
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dynamic_id          TEXT UNIQUE NOT NULL,
+  wallet_address      TEXT NOT NULL,
+  preset              TEXT NOT NULL,            -- 'institutional' | 'degen'
+  dynamic_wallet_id   TEXT,                     -- Dynamic walletId from delegation webhook (null until first trade)
+  delegated_share     TEXT,                     -- AES-256 encrypted ServerKeyShare JSON (null until delegated)
+  wallet_api_key      TEXT,                     -- AES-256 encrypted wallet API key (null until delegated)
+  delegation_active   BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at          TIMESTAMP DEFAULT NOW()
 )
 
 -- Proposals: parsed Claude AI transaction proposals
@@ -54,17 +57,6 @@ proposals (
   updated_at      TIMESTAMP DEFAULT NOW()
 )
 
--- Delegations: Dynamic SDK delegated signing authority (1:1 with proposal)
-delegations (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  proposal_id     UUID UNIQUE NOT NULL REFERENCES proposals(id),
-  user_id         UUID NOT NULL REFERENCES users(id),
-  delegation_data TEXT,                     -- JSON: Dynamic SDK delegation payload (TBD)
-  active          BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at      TIMESTAMP DEFAULT NOW(),
-  revoked_at      TIMESTAMP
-)
-
 -- Orders: Uniswap API swap executions linked to a proposal
 orders (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -79,17 +71,21 @@ orders (
 ### Lifecycle
 
 ```
-Proposal: confirmed → completed (all orders done) / failed
-Delegation: active → revoked (when proposal completes/fails)
-Order: pending → executing → completed / failed
+User.delegation_active: false → true (lazy — set on first trade confirmation via webhook)
+Proposal:               confirmed → completed (all orders done) / failed
+Order:                  pending → executing → completed / failed
 ```
 
-When all orders under a proposal reach a terminal state (completed/failed), the proposal status updates accordingly and the linked delegation is revoked.
+When all orders under a proposal reach a terminal state (completed/failed), the proposal status updates accordingly.
+
+## TypeORM Notes
+
+- `users.delegated_share` and `users.wallet_api_key` must be encrypted/decrypted in the service layer, never stored plaintext
+- User row updated (not inserted) on webhook delivery — use `eventId` as idempotency key if replays are needed
 
 ## Tasks
 
-- [ ] Create TypeORM entities for all 4 tables in `apps/server/src/db/`
+- [ ] Create TypeORM entities for all 3 tables in `apps/server/src/db/`
 - [ ] Create shared types in `packages/shared/types.ts` (enums for status, type, action)
 - [ ] Set up SQLite TypeORM connection config
 - [ ] Add migration for initial schema
-- [ ] Remove old `messages` table from architecture spec (replaced by proposals)
