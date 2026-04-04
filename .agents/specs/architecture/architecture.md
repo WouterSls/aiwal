@@ -390,16 +390,28 @@ When a proposal is cancelled, all non-terminal orders are set to `cancelled`. Co
 | Method | Route                       | Description                                                                                |
 | ------ | --------------------------- | ------------------------------------------------------------------------------------------ |
 | GET    | `/api/users?walletAddress=` | Look up user by wallet address. 200 + user profile if found, 404 if not. No auth required. |
-| POST   | `/api/users`                 | Create user with wallet address + preset in one shot. No auth required.                    |
-| POST   | `/api/chat`                  | Send message, get agent response. Requires JWT.                                            |
-| GET    | `/api/portfolio`             | Wallet balances + token values                                                             |
-| GET    | `/api/proposals`             | List user's proposals                                                                      |
-| POST   | `/api/proposals`             | Create proposal + orders from confirmed strategy                                           |
-| GET    | `/api/proposals/:id`         | Get single proposal                                                                        |
-| GET    | `/api/proposals/:id/orders`  | List orders under a proposal                                                               |
-| DELETE | `/api/proposals/:id`         | Cancel proposal and all active orders                                                      |
-| GET    | `/api/prices`                | Current Chainlink price feeds                                                              |
-| POST   | `/api/webhooks/dynamic`      | Receive Dynamic delegation webhook (no JWT — HMAC-SHA256 only)                             |
+<<<<<<< HEAD
+| POST   | `/api/users`              | Create user with wallet address + preset in one shot. No auth required. |
+| POST   | `/api/chat`                  | Send message, get agent response. Requires JWT. |
+| GET    | `/api/portfolio`             | Wallet balances + token values           |
+| GET    | `/api/proposals`             | List user's proposals                    |
+| POST   | `/api/proposals`             | Create proposal + orders from confirmed strategy |
+| GET    | `/api/proposals/:id`         | Get single proposal                      |
+| GET    | `/api/proposals/:id/orders`  | List orders under a proposal             |
+| DELETE | `/api/proposals/:id`         | Cancel proposal and all active orders    |
+| GET    | `/api/prices`                | Current Chainlink price feeds            |
+| POST   | `/api/webhooks/dynamic`   | Receive Dynamic delegation webhook (no JWT — HMAC-SHA256 only) |
+=======
+| POST   | `/api/users`                | Create user with wallet address + preset in one shot. No auth required.                    |
+| POST   | `/api/chat`                 | Send message, get agent response. Requires JWT.                                            |
+| GET    | `/api/portfolio`            | Wallet balances + token values                                                             |
+| GET    | `/api/orders`               | List user's orders                                                                         |
+| POST   | `/api/orders`               | Create order (from confirmed proposal)                                                     |
+| DELETE | `/api/orders/:id`           | Cancel an order                                                                            |
+| POST   | `/api/orders/:id/confirm`   | Trigger delegation (if needed) + execute                                                   |
+| GET    | `/api/prices`               | Current Chainlink price feeds                                                              |
+| POST   | `/api/webhooks/dynamic`     | Receive Dynamic delegation webhook (no JWT — HMAC-SHA256 only)                             |
+>>>>>>> f6c6d53 (chore: fix link)
 
 ---
 
