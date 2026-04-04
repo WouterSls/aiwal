@@ -20,10 +20,15 @@
 
 ## Frontend
 
-| Spec                                                                   | Status   | Description                                                                                                        |
-| ---------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
-| [frontend-architecture.md](architecture/frontend-architecture-spec.md) | NOT DONE | Next.js frontend — Tailwind/shadcn, React Query, WebSocket streaming, 50/50 chat+portfolio layout, proposal editor |
-| [frontend-folder-setup.md](architecture/frontend-setup-spec.md)        | NOT DONE | Frontend scaffolding — flat root `frontend/`, Next.js 16 JS, independent packages, dev workflow                    |
+| Spec                                                                        | Status   | Description                                                                                                        |
+| --------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| [frontend-architecture.md](architecture/frontend-architecture.md)           | NOT DONE | Next.js frontend — Tailwind/shadcn, React Query, WebSocket streaming, 50/50 chat+portfolio layout, proposal editor |
+| [frontend-folder-setup.md](frontend/frontend-folder-setup.md)               | NOT DONE | Frontend scaffolding — flat root `frontend/`, Next.js 16 JS, independent packages, dev workflow                    |
+| [design.md](frontend/design.md)                                             | NOT DONE | Design system — visual language, color palette, typography, component guidelines                                    |
+| [landing-page.md](frontend/landing-page.md)                                 | NOT DONE | Landing page — `/` route, hero section, CTA, layout                                                                |
+| [header.md](frontend/header.md)                                             | NOT DONE | Header — persistent site header across all routes                                                                   |
+| [connect-button.md](frontend/connect-button.md)                             | NOT DONE | Connect button — Dynamic JS SDK auth, email OTP + social login via custom modal                                     |
+| [dashboard.md](frontend/dashboard.md)                                       | NOT DONE | Dashboard — `/dashboard` route, 50/50 chat+portfolio layout, proposal editor, proposals history                     |
 
 ## Dynamic Wallet Integration
 

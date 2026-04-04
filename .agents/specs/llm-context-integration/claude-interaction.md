@@ -39,13 +39,13 @@ Before each Claude call, the frontend assembles a context bundle from locally av
 
 ### Data Sources
 
-| Data              | Source                          | When fetched            |
-| ----------------- | ------------------------------- | ----------------------- |
-| Trading profile   | Local state (preset selection)  | Already in memory       |
-| Wallet balances   | `GET /api/portfolio`            | On chat mount + refresh |
-| Open orders       | `GET /api/orders`               | On chat mount + refresh |
-| Price feeds       | `GET /api/prices`               | Before each message     |
-| Chat history      | Local state (message array)     | Already in memory       |
+| Data            | Source                         | When fetched            |
+| --------------- | ------------------------------ | ----------------------- |
+| Trading profile | Local state (preset selection) | Already in memory       |
+| Wallet balances | `GET /api/portfolio`           | On chat mount + refresh |
+| Open orders     | `GET /api/orders`              | On chat mount + refresh |
+| Price feeds     | `GET /api/prices`              | Before each message     |
+| Chat history    | Local state (message array)    | Already in memory       |
 
 ### Context Refresh Strategy
 
@@ -61,7 +61,7 @@ The system prompt is assembled once on chat mount (and refreshed when context da
 
 ### Template
 
-```
+````
 You are the Aiwal trading agent on Base L2.
 
 ## Your Profile
@@ -97,23 +97,27 @@ When the user wants to execute a trade, wrap your proposal in a ```json code blo
   "condition": "<price condition if limit/SL/TP, null for swap>",
   "reasoning": "<1-2 sentence explanation>"
 }
-```
+````
 
 You may include conversational text before or after the JSON block.
 
 ### Format 2: Informational Response
+
 When the user asks about market conditions, portfolio, strategy, or anything that doesn't require a trade. Respond naturally in your persona.
 
 ### Format 3: Clarifying Question
+
 When the user's intent is ambiguous or missing critical details (which token, how much, etc.), ask a specific follow-up question.
 
 ## Constraints
+
 - NEVER propose a trade for more than the user's available balance
 - ALWAYS respect the slippage tolerance from your profile
 - ALWAYS include reasoning for any proposal
 - If the user asks to trade a token not in your allowed list, explain why you can't
 - All amounts must be strings to preserve decimal precision
-```
+
+````
 
 ---
 
@@ -129,7 +133,7 @@ const response = await anthropic.messages.create({
   messages: conversationHistory,
   stream: true,
 });
-```
+````
 
 ### Conversation History Shape
 
@@ -146,7 +150,7 @@ type Message = {
 
 ### Context Window Management
 
-- Keep last 50 messages in conversation history
+- Keep last 25 messages in conversation history
 - When approaching limit, trim oldest messages (keep system prompt intact)
 - System prompt is re-assembled with fresh data, not stored in message history
 
@@ -158,7 +162,7 @@ The frontend must parse Claude's response to detect transaction proposals.
 
 ### Parsing Logic
 
-```typescript
+````typescript
 function parseAgentResponse(content: string): {
   text: string;
   proposal: TransactionProposal | null;
@@ -185,7 +189,7 @@ function parseAgentResponse(content: string): {
   const text = content.replace(/```json[\s\S]*?```/, "").trim();
   return { text, proposal: parsed };
 }
-```
+````
 
 ### TransactionProposal Type
 
@@ -250,13 +254,13 @@ Proposal detection and the confirmation modal only trigger **after** the full st
 
 ## 7. Error Handling
 
-| Scenario                    | Handling                                                     |
-| --------------------------- | ------------------------------------------------------------ |
-| Claude API rate limit       | Show "Agent is busy, try again in a moment" in chat          |
-| Claude API error (5xx)      | Show "Agent unavailable" + retry button                      |
-| Invalid JSON in response    | Treat as informational response (no proposal card)           |
-| Proposal exceeds balance    | Frontend validates before showing confirm — show warning     |
-| Network error during stream | Show partial response + "Connection lost" + retry button     |
+| Scenario                    | Handling                                                 |
+| --------------------------- | -------------------------------------------------------- |
+| Claude API rate limit       | Show "Agent is busy, try again in a moment" in chat      |
+| Claude API error (5xx)      | Show "Agent unavailable" + retry button                  |
+| Invalid JSON in response    | Treat as informational response (no proposal card)       |
+| Proposal exceeds balance    | Frontend validates before showing confirm — show warning |
+| Network error during stream | Show partial response + "Connection lost" + retry button |
 
 ---
 
@@ -274,10 +278,10 @@ The Claude API key is used from the frontend. For MVP/hackathon:
 
 The `{preset_system_prompt_fragment}` in the system prompt is swapped based on the user's selected preset:
 
-| Preset          | Fragment source                                        |
-| --------------- | ------------------------------------------------------ |
-| Institutional   | `agent-presets/institutional-preset.md` → prompt block |
-| Degen           | `agent-presets/degen-preset.md` → prompt block         |
+| Preset        | Fragment source                                        |
+| ------------- | ------------------------------------------------------ |
+| Institutional | `agent-presets/institutional-preset.md` → prompt block |
+| Degen         | `agent-presets/degen-preset.md` → prompt block         |
 
 Both fragments define: persona, tone, constraints, slippage, and token scope.
 

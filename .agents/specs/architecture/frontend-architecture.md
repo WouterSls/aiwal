@@ -38,24 +38,34 @@ Login page. Dynamic SDK handles social/email login and embedded wallet creation.
 
 **Components:**
 - `LandingPage` — logo, tagline, login button
-- `DynamicWidget` — Dynamic SDK login widget
+- `ConnectButton` — Dynamic SDK login trigger
 
 **Flow:**
 1. User clicks login → Dynamic SDK modal
-2. On auth success → redirect to `/onboard` (first time) or `/chat` (returning user)
+2. On auth success → wallet address received from Dynamic
+3. `GET /api/users?walletAddress=` — if 200 → redirect to `/dashboard`, if 404 → redirect to `/onboard`
 
 ### `/onboard` — Preset Selection
 
 One-time page where the user picks their trading profile.
 
 **Components:**
-- `OnboardPage` — layout wrapper
-- `PresetCard` — clickable card for each preset (Institutional / Degen)
-  - Shows: name, risk level, description, allowed tokens summary
+- `OnboardPage` — layout wrapper (Header visible, no footer)
+- `PresetCard` — large clickable shadcn Card for each preset
+  - Shows: name, risk level, description
+  - Hover: lightly enlarged (scale transform)
+  - Selected: outline/ring
+
+**Guard:**
+- On mount (`useEffect`), call `GET /api/users?walletAddress=`
+- If 200 (already onboarded) → redirect to `/dashboard`
+- Render nothing until check resolves
 
 **Flow:**
-1. User selects preset → `POST /api/auth/session` stores preset in DB
-2. Redirect to `/chat`
+1. User selects preset card → selected state shown
+2. User clicks "Continue" confirmation button
+3. `POST /api/users { walletAddress, preset }` → backend creates user
+4. Redirect to `/dashboard`
 
 ### `/chat` — Main Trading Interface
 
