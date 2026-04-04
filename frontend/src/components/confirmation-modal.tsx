@@ -12,6 +12,7 @@ import { TradingStrategy } from "@/lib/claude";
 interface ConfirmationModalProps {
   strategy: TradingStrategy;
   open: boolean;
+  pending?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -19,6 +20,7 @@ interface ConfirmationModalProps {
 export function ConfirmationModal({
   strategy,
   open,
+  pending = false,
   onConfirm,
   onCancel,
 }: ConfirmationModalProps) {
@@ -42,7 +44,8 @@ export function ConfirmationModal({
           </div>
 
           <div className="text-xs uppercase tracking-widest text-black/50">
-            {strategy.trades.length} trade{strategy.trades.length !== 1 ? "s" : ""}
+            {strategy.trades.length} trade
+            {strategy.trades.length !== 1 ? "s" : ""}
           </div>
 
           <div className="space-y-1">
@@ -63,15 +66,17 @@ export function ConfirmationModal({
         <DialogFooter className="flex gap-2">
           <button
             onClick={onCancel}
-            className="flex-1 border border-black bg-white py-2 text-sm font-medium uppercase tracking-widest text-black transition-colors hover:bg-black hover:text-white"
+            disabled={pending}
+            className="flex-1 border border-black bg-white py-2 text-sm font-medium uppercase tracking-widest text-black transition-colors hover:bg-black/10 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 border border-black bg-black py-2 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-black"
+            disabled={pending}
+            className="flex-1 border border-black bg-black py-2 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-black/80 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Confirm
+            {pending ? "Processing..." : "Confirm"}
           </button>
         </DialogFooter>
       </DialogContent>

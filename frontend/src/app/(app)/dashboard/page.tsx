@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { getWalletAccounts, onEvent } from "@dynamic-labs-sdk/client";
 import { dynamicClient } from "@/lib/dynamic";
+import { delegate } from "@/hooks/use-delegation";
 import { parseAgentResponse, TradingStrategy } from "@/lib/claude";
 import { buildSystemPrompt, TradePreset } from "@/lib/presets";
 import { PortfolioView } from "@/components/portfolio-view";
@@ -12,14 +13,17 @@ import { ProposalEditor } from "@/components/proposal-editor";
 import { ChatPanel, ChatMessage } from "@/components/chat-panel";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ProposalsHistory } from "@/components/proposals-history";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeProposal, setActiveProposal] =
-    useState<TradingStrategy | null>(null);
+  const [activeProposal, setActiveProposal] = useState<TradingStrategy | null>(
+    null,
+  );
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmPending, setConfirmPending] = useState(false);
   const [preset, setPreset] = useState<TradePreset | null>(null);
 
   const [mounted, setMounted] = useState(false);
@@ -164,14 +168,30 @@ export default function DashboardPage() {
 
   async function handleConfirm() {
     if (!activeProposal) return;
+
+    setConfirmPending(true);
     try {
-      await fetch(`/api/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(activeProposal),
-      });
+      const confirmationPoll = fetch("/api/proposal/confirmation");
+      await Promise.all([
+        delegate(),
+        fetch("/api/proposal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(activeProposal),
+        }),
+      ]);
+      const confirmRes = await confirmationPoll;
+      if (!confirmRes.ok) throw new Error("Task timeout");
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+    } catch (error: unknown) {
+      let errorMessage = error instanceof Error ? error.message : "Unknown";
+      if (errorMessage.includes("Task timed out")) {
+        errorMessage = "Timed out waiting for response from server";
+      }
+
+      toast.error("Error Submitting Propsal", { description: errorMessage });
     } finally {
+      setConfirmPending(false);
       setConfirmOpen(false);
       setActiveProposal(null);
       const doneMsg: ChatMessage = {
@@ -226,6 +246,7 @@ export default function DashboardPage() {
         <ConfirmationModal
           strategy={activeProposal}
           open={confirmOpen}
+          pending={confirmPending}
           onConfirm={handleConfirm}
           onCancel={() => setConfirmOpen(false)}
         />
