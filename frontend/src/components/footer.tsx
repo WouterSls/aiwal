@@ -1,7 +1,38 @@
 export function Footer() {
   return (
-    <footer>
-      <p>Aiwal</p>
+    <footer className="border-t border-black py-10">
+      <div className="mx-auto w-full max-w-6xl px-6 md:px-10">
+        {/** OUR MISSION | LEGAL */}
+        <div className="grid grid-cols-2 gap-x-10 gap-y-14">
+          <div className="max-w-md">
+            <p className="bold pb-2">OUR MISSION</p>
+            <p className="text-sm font-light tracking-widest lowercase">
+              the next generation of wallet automation. built for onchain
+              trading and liquidity — without the manual overhead.
+            </p>
+          </div>
+          <div className="flex flex-col items-end text-right">
+            <p className="bold pb-2">LEGAL</p>
+            <p className="max-w-md text-sm font-light tracking-widest">
+              Aiwal is experimental software. Use at your own risk. Nothing on
+              this platform constitutes financial advice.
+            </p>
+          </div>
+        </div>
+        {/** LEGAL LINKS */}
+        <div className="mt-20 text-center">
+          <div className="grid grid-cols-5 max-w-lg mx-auto text-sm">
+            <a href="https://github.com/aiwal">GitHub</a>
+            <span>·</span>
+            <a href="/terms">Terms of Service</a>
+            <span>·</span>
+            <a href="/privacy">Privacy Policy</a>
+          </div>
+          <p className="mt-8 text-xs font-medium tracking-widest uppercase">
+            © 2026 Aiwal. All rights reserved.
+          </p>
+        </div>
+      </div>
     </footer>
   );
 }
