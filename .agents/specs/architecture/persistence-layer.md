@@ -32,7 +32,7 @@ users (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   dynamic_id          TEXT UNIQUE NOT NULL,
   wallet_address      TEXT NOT NULL,
-  preset              TEXT NOT NULL,            -- 'institutional' | 'degen'
+  preset              TEXT,                     -- 'institutional' | 'degen' | null until onboarding complete
   dynamic_wallet_id   TEXT,                     -- Dynamic walletId from delegation webhook (null until first trade)
   delegated_share     TEXT,                     -- AES-256 encrypted ServerKeyShare JSON (null until delegated)
   wallet_api_key      TEXT,                     -- AES-256 encrypted wallet API key (null until delegated)
