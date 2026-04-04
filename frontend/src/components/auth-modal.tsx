@@ -9,6 +9,11 @@ import {
 } from "@dynamic-labs-sdk/client";
 import { OtpInput } from "@/components/otp-input";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface AuthModalProps {
   open: boolean;
@@ -19,9 +24,8 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   const [email, setEmail] = useState("");
   const [otpVerification, setOtpVerification] = useState<OTPVerification | null>(null);
   const [emailLoading, setEmailLoading] = useState(false);
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
-
-  if (!open) return null;
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,18 +58,11 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="relative flex w-full max-w-sm flex-col gap-8 bg-white p-10">
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 text-sm lowercase tracking-widest text-black"
-        >
-          close
-        </button>
-
-        <h2 className="text-2xl font-black uppercase tracking-tight">
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <DialogContent className="flex w-full max-w-sm flex-col gap-8 rounded-none bg-white p-10 shadow-none ring-0">
+        <DialogTitle className="text-2xl font-black uppercase tracking-tight">
           Connect
-        </h2>
+        </DialogTitle>
 
         {otpVerification ? (
           <OtpInput otpVerification={otpVerification} onBack={handleBack} />
@@ -81,30 +78,14 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             />
             <button
               type="submit"
-              disabled={emailLoading}
+              disabled={emailLoading || !emailValid}
               className="border border-black bg-black px-10 py-3 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
             >
               {emailLoading ? "Sending..." : "Send code"}
             </button>
           </form>
         )}
-
-        {/**
-        <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-widest text-black/40">or continue with</p>
-          {(["google", "discord"] as SocialProvider[]).map((provider) => (
-            <button
-              key={provider}
-              onClick={() => handleSocial(provider)}
-              disabled={socialLoading !== null}
-              className="border border-black px-10 py-3 text-sm font-medium uppercase tracking-widest text-black transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {socialLoading === provider ? "Redirecting..." : provider}
-            </button>
-          ))}
-        </div>
-        */}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { getWalletAccounts } from "@dynamic-labs-sdk/client";
+import { getWalletAccounts, onEvent } from "@dynamic-labs-sdk/client";
 import { dynamicClient } from "@/lib/dynamic";
 import { API_URL } from "@/lib/api";
 import { parseAgentResponse, TransactionProposal } from "@/lib/claude";
@@ -59,8 +60,25 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
+  const router = useRouter();
+
+  const accounts = getWalletAccounts(dynamicClient);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (mounted && !accounts.length) {
+      router.push("/");
+    }
+  }, [mounted, accounts.length, router]);
+
+  useEffect(() => {
+    const offLogout = onEvent(
+      { event: "logout", listener: () => router.push("/") },
+      dynamicClient,
+    );
+    return offLogout;
+  }, [router]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -146,14 +164,11 @@ export default function DashboardPage() {
     setActiveProposal(null);
   }
 
-  if (!mounted) return null;
-
-  const accounts = getWalletAccounts(dynamicClient);
-  if (!accounts.length) return null;
+  if (!mounted || !accounts.length) return null;
 
   return (
     <>
-      <div className="flex h-[calc(100vh-65px)] overflow-hidden border-b border-black">
+      <div className="flex h-[calc(100vh-65px)] overflow-hidden border-b border-black pt-2">
         <div className="w-1/2 overflow-hidden border-r border-black">
           {activeProposal ? (
             <ProposalEditor

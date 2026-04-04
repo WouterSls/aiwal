@@ -52,7 +52,7 @@ export function Header() {
     const accounts = getWalletAccounts(dynamicClient);
     setAddress(accounts[0]?.address ?? null);
 
-    return onEvent(
+    const offWallets = onEvent(
       {
         event: "walletAccountsChanged",
         listener: ({ walletAccounts }) => {
@@ -61,6 +61,22 @@ export function Header() {
       },
       dynamicClient,
     );
+
+    const offLogout = onEvent(
+      {
+        event: "logout",
+        listener: () => {
+          setAddress(null);
+          setDisconnecting(false);
+        },
+      },
+      dynamicClient,
+    );
+
+    return () => {
+      offWallets();
+      offLogout();
+    };
   }, []);
 
   async function handleDisconnect() {
@@ -94,7 +110,7 @@ export function Header() {
             <button
               onClick={handleDisconnect}
               disabled={disconnecting}
-              className="border border-black bg-transparent px-6 py-2 text-sm font-medium uppercase tracking-widest text-black transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="border border-black bg-transparent px-6 py-3 text-sm font-medium uppercase tracking-widest text-black transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {disconnecting ? "Disconnecting..." : "Disconnect"}
             </button>

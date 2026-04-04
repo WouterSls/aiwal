@@ -6,14 +6,13 @@ export function Footer() {
         <div className="grid grid-cols-2 gap-x-10 gap-y-14">
           <div className="max-w-md">
             <p className="bold pb-2">OUR MISSION</p>
-            <p className="text-sm font-light tracking-widest lowercase">
-              the next generation of wallet automation. built for onchain
-              trading and liquidity — without the manual overhead.
+            <p className="text-sm font-light tracking-widest max-w-2xs">
+              Turning DeFi complexity into conversation.
             </p>
           </div>
           <div className="flex flex-col items-end text-right">
             <p className="bold pb-2">LEGAL</p>
-            <p className="max-w-md text-sm font-light tracking-widest">
+            <p className="max-w-2xs text-sm font-light tracking-widest">
               Aiwal is experimental software. Use at your own risk. Nothing on
               this platform constitutes financial advice.
             </p>

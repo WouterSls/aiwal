@@ -8,7 +8,8 @@ export async function POST(request: Request) {
   const { messages, system } = await request.json();
 
   const stream = anthropic.messages.stream({
-    model: "claude-sonnet-4-6-20250514",
+    // claude-sonnet-4-6
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 2048,
     system,
     messages,

@@ -13,7 +13,6 @@ import {
   createWaasWalletAccounts,
 } from "@dynamic-labs-sdk/client/waas";
 import { dynamicClient } from "@/lib/dynamic";
-import { API_URL } from "@/lib/api";
 import { ConnectButton } from "@/components/connect-button";
 import { Footer } from "@/components/footer";
 import { toast } from "sonner";
@@ -30,13 +29,16 @@ export default function LandingPage() {
           try {
             const missing =
               await getChainsMissingWaasWalletAccounts(dynamicClient);
+
             await createWaasWalletAccounts({ chains: missing }, dynamicClient);
+
             const accounts = await getWalletAccounts(dynamicClient);
             const walletAddress = accounts[0].address;
 
             const res = await fetch(
-              `${API_URL}/api/presets?userId=${user.userId}&walletAddress=${walletAddress}`,
+              `/api/wallets?walletAddress=${walletAddress}`,
             );
+
             if (res.ok) {
               router.push("/dashboard");
             } else {
@@ -66,7 +68,7 @@ export default function LandingPage() {
             AIWAL
           </h1>
           <p className="text-xl font-light lowercase tracking-widest">
-            next generation of wallet automation
+            The next generation of wallets
           </p>
           <ConnectButton />
         </div>
