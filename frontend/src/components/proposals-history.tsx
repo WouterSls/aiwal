@@ -17,7 +17,8 @@ interface Order {
 async function fetchOrders(): Promise<Order[]> {
   const res = await fetch(`/api/orders`);
   if (!res.ok) throw new Error("Failed to fetch orders");
-  return res.json();
+  const { orders } = await res.json();
+  return orders ?? [];
 }
 
 export function ProposalsHistory() {
