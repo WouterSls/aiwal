@@ -9,11 +9,10 @@ import { UsersModule } from './users/users.module';
 import { DynamicAuthGuard } from './auth/guards/dynamic-auth.guard';
 import { OrdersModule } from './orders/orders.module';
 import { WalletModule } from './wallet/wallet.module';
-import { ExecutionModule } from './execution/execution.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
     EventEmitterModule.forRoot(),
     DatabaseModule,
     CommonModule,
@@ -21,7 +20,6 @@ import { ExecutionModule } from './execution/execution.module';
     UsersModule,
     WalletModule,
     OrdersModule,
-    ExecutionModule,
   ],
   providers: [
     {

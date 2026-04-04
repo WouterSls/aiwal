@@ -11,3 +11,6 @@ frontend/out/
 # Backend
 node_modules
 backend/dist
+
+# db
+*.sqlite

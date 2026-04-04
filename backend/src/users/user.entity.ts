@@ -21,7 +21,7 @@ export class UserEntity {
   @Column({ nullable: true, type: 'varchar' })
   preset: TradingPreset | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   dynamicWalletId: string | null;
 
   @Column({ nullable: true, type: 'text' })

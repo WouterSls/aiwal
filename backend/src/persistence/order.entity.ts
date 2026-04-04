@@ -27,19 +27,19 @@ export class OrderEntity {
   @Column()
   amountIn: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   expectedOut: string | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   to: string | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   slippageTolerance: string | null;
 
   @Column({ nullable: true, type: 'float' })
   tradingPriceUsd: number | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   confirmationHash: string | null;
 
   @Column({ default: 'pending' })
