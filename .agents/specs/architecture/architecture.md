@@ -323,10 +323,9 @@ When all orders under a proposal reach a terminal state, the proposal status upd
 
 | Method | Route                     | Description                              |
 | ------ | ------------------------- | ---------------------------------------- |
-| POST   | `/api/auth/session`       | Validate Dynamic session, issue JWT      |
-| GET    | `/api/users/me`           | Get current authenticated user           |
-| PATCH  | `/api/users/me/preset`    | Update user's trading preset             |
-| POST   | `/api/chat`               | Send message, get agent response         |
+| GET    | `/api/users?walletAddress=` | Look up user by wallet address. 200 + user profile if found, 404 if not. No auth required. |
+| POST   | `/api/users`              | Create user with wallet address + preset in one shot. No auth required. |
+| POST   | `/api/chat`               | Send message, get agent response. Requires JWT. |
 | GET    | `/api/portfolio`          | Wallet balances + token values           |
 | GET    | `/api/orders`             | List user's orders                       |
 | POST   | `/api/orders`             | Create order (from confirmed proposal)   |
@@ -339,16 +338,28 @@ When all orders under a proposal reach a terminal state, the proposal status upd
 ## 5. Auth Flow
 
 ```
-1. User visits frontend → Dynamic SDK login (social / email)
+New user:
+1. User visits / → Dynamic SDK login (social / email)
 2. Dynamic creates embedded wallet on Base
-3. Frontend receives Dynamic session token
-4. Frontend sends session token to POST /api/auth/session (one-time exchange)
-5. Backend validates session via Dynamic SDK (server-side)
-6. Backend finds or creates user in DB (stores wallet mapping)
-7. Backend issues JWT containing { sub, dynamicId, walletAddress }
-8. Frontend stores JWT, sends as Bearer token with all subsequent API calls
-9. JwtAuthGuard validates JWT on every request (no Dynamic API call needed)
-10. Delegated access granted to backend for autonomous execution
+3. Frontend receives wallet address from Dynamic
+4. Frontend calls GET /api/users?walletAddress= → 404 (no user)
+5. Frontend redirects to /onboard
+6. User selects preset and confirms
+7. Frontend calls POST /api/users { walletAddress, preset }
+8. Backend creates user in DB
+9. Frontend redirects to /dashboard
+
+Returning user:
+1. User visits / → Dynamic SDK login (social / email)
+2. Dynamic restores embedded wallet
+3. Frontend receives wallet address from Dynamic
+4. Frontend calls GET /api/users?walletAddress= → 200 + user profile
+5. Frontend redirects to /dashboard
+
+JWT (for proposal submission):
+- Issued lazily when the user sends a proposal (POST /api/chat)
+- Frontend sends Dynamic session token at that point to receive JWT
+- JWT stored in memory, sent as Bearer token for all subsequent authenticated calls
 ```
 
 ---
