@@ -11,6 +11,7 @@ Monitors active order conditions by reacting to new Base blocks. On each block, 
 - `ethers` — WebSocket provider for new block events on Base
 - `fetch` (native) — HTTP calls to Uniswap Quoter API
 - Uniswap Quoter API — official REST API for swap quotes (bounty requirement)
+- `@nestjs/config` / `ConfigService` — reads BASE_WSS_URL and UNISWAP_API_URL at runtime
 
 ## Configuration
 
@@ -38,7 +39,11 @@ Manages the active order watch list and fetches prices via Uniswap Quoter API.
 ```typescript
 // pricefeed/pricefeed.service.ts
 
-const STABLECOINS = new Set<string>([/* USDC, USDT, DAI addresses on Base */]);
+const STABLECOINS = new Set<string>([
+  '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
+  '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
+]);
 
 @Injectable()
 export class PriceFeedService {
@@ -149,15 +154,22 @@ export class BlockListenerService implements OnModuleInit, OnModuleDestroy {
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
     EventEmitterModule.forRoot(),
+    DatabaseModule,
     CommonModule,
     AuthModule,
     UsersModule,
     WalletModule,
     PriceFeedModule,
-    // OrdersModule,
-    // ExecutionModule,
+    OrdersModule,
+    ExecutionModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: DynamicAuthGuard,
+    },
   ],
 })
 export class AppModule {}
@@ -168,4 +180,26 @@ export class AppModule {}
 ```
 ethers
 @nestjs/event-emitter
+@nestjs/config
 ```
+
+## File Structure
+
+```
+src/price-feed/
+├── price-feed.module.ts
+├── price-feed.service.ts
+└── block-listener.service.ts
+```
+
+## Tasks
+
+- [ ] Implement `PriceFeedService.watchOrder` — store entry in `watchedOrders` map
+- [ ] Implement `PriceFeedService.unwatchOrder` — delete entry from `watchedOrders` map
+- [ ] Implement `PriceFeedService.getWatchedOrders` — return `watchedOrders` map
+- [ ] Implement `PriceFeedService.fetchPrice` — call Uniswap Quoter API, return `1 / (amountOut / 1e6)` as USD price
+- [ ] Implement `PriceFeedService.fetchPrices` — deduplicate, `Promise.allSettled`, return `Map<address, price>`, log and skip rejected
+- [ ] Create `block-listener.service.ts` implementing `BlockListenerService` as specced
+- [ ] Wire `BlockListenerService` into `price-feed.module.ts` as a provider
+- [ ] Add `PriceFeedModule` import to `app.module.ts`
+- [ ] Add `BASE_WSS_URL` and `UNISWAP_API_URL` to `.env.local`

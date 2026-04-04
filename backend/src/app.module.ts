@@ -10,6 +10,7 @@ import { DynamicAuthGuard } from './auth/guards/dynamic-auth.guard.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { WalletModule } from './wallet/wallet.module.js';
 import { ExecutionModule } from './execution/execution.module.js';
+import { PriceFeedModule } from './price-feed/price-feed.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ExecutionModule } from './execution/execution.module.js';
     AuthModule,
     UsersModule,
     WalletModule,
+    PriceFeedModule,
     OrdersModule,
     ExecutionModule,
   ],
