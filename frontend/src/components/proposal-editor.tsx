@@ -62,6 +62,9 @@ export function ProposalEditor({
             showRemove={strategy.trades.length > 1}
             onChange={(patch) => updateTrade(i, patch)}
             onTokenInChange={(val) => onChange({ ...strategy, token_in: val })}
+            onTokenOutChange={(val) =>
+              onChange({ ...strategy, token_out: val })
+            }
             onRemove={() => removeTrade(i)}
           />
         ))}
@@ -101,6 +104,7 @@ interface TradeRowProps {
   showRemove: boolean;
   onChange: (patch: Partial<Trade>) => void;
   onTokenInChange: (val: string) => void;
+  onTokenOutChange: (val: string) => void;
   onRemove: () => void;
 }
 
@@ -124,6 +128,7 @@ function TradeRow({
   showRemove,
   onChange,
   onTokenInChange,
+  onTokenOutChange,
   onRemove,
 }: TradeRowProps) {
   const isSend = trade.type === "send";
@@ -172,89 +177,85 @@ function TradeRow({
               className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
             />
           </Field>
-          <Field label="Amount In">
+
+          {!isSend && (
+            <Field label="Token Out">
+              <input
+                value={tokenOut}
+                onChange={(e) => onTokenOutChange(e.target.value)}
+                className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
+              />
+            </Field>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Amount">
             <input
               value={trade.amount_in}
               onChange={(e) => onChange({ amount_in: e.target.value })}
               className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
             />
           </Field>
+
+          {isSend && (
+            <Field label="To">
+              <input
+                value={trade.to ?? ""}
+                onChange={(e) => onChange({ to: e.target.value })}
+                className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
+              />
+            </Field>
+          )}
+
+          {isSwap && (
+            <>
+              <Field label="Slippage (%)">
+                <input
+                  value={trade.slippage_tolerance ?? ""}
+                  onChange={(e) =>
+                    onChange({ slippage_tolerance: e.target.value })
+                  }
+                  className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
+                />
+              </Field>
+              <Field label="Expected Out">
+                <input
+                  value={trade.expected_out ?? ""}
+                  readOnly
+                  className="w-full border border-black px-3 py-2 text-sm focus:outline-none bg-black/5 text-black/50 cursor-default"
+                />
+              </Field>
+            </>
+          )}
+
+          {isLimit && (
+            <>
+              <Field label="Price (USD)">
+                <input
+                  value={trade.tradingPriceUsd ?? ""}
+                  onChange={(e) =>
+                    onChange({
+                      tradingPriceUsd: e.target.value
+                        ? Number(e.target.value)
+                        : null,
+                    })
+                  }
+                  className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
+                />
+              </Field>
+              <Field label="Slippage (%)">
+                <input
+                  value={trade.slippage_tolerance ?? ""}
+                  onChange={(e) =>
+                    onChange({ slippage_tolerance: e.target.value })
+                  }
+                  className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
+                />
+              </Field>
+            </>
+          )}
         </div>
-
-        {isSend && (
-          <Field label="To">
-            <input
-              value={trade.to ?? ""}
-              onChange={(e) => onChange({ to: e.target.value })}
-              className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
-            />
-          </Field>
-        )}
-
-        {isSwap && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Expected Out">
-              <input
-                value={trade.expected_out ?? ""}
-                readOnly
-                className="w-full border border-black px-3 py-2 text-sm focus:outline-none bg-black/5 text-black/50 cursor-default"
-              />
-            </Field>
-            <Field label="Slippage (%)">
-              <input
-                value={trade.slippage_tolerance ?? ""}
-                onChange={(e) =>
-                  onChange({ slippage_tolerance: e.target.value })
-                }
-                className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
-              />
-            </Field>
-          </div>
-        )}
-
-        {isSwap && (
-          <Field label="Price (USD)">
-            <input
-              value={trade.tradingPriceUsd ?? ""}
-              onChange={(e) =>
-                onChange({
-                  tradingPriceUsd: e.target.value
-                    ? Number(e.target.value)
-                    : null,
-                })
-              }
-              className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
-            />
-          </Field>
-        )}
-
-        {isLimit && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Slippage (%)">
-              <input
-                value={trade.slippage_tolerance ?? ""}
-                onChange={(e) =>
-                  onChange({ slippage_tolerance: e.target.value })
-                }
-                className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
-              />
-            </Field>
-            <Field label="Price (USD)">
-              <input
-                value={trade.tradingPriceUsd ?? ""}
-                onChange={(e) =>
-                  onChange({
-                    tradingPriceUsd: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  })
-                }
-                className="w-full border border-black px-3 py-2 text-sm focus:outline-none"
-              />
-            </Field>
-          </div>
-        )}
-
         {showRemove && (
           <button
             onClick={onRemove}
