@@ -57,7 +57,6 @@ export class TypeOrmUserRepository extends UserRepository {
       dynamicWalletId: data.dynamicWalletId,
       delegatedShare: data.delegatedShare,
       walletApiKey: data.walletApiKey,
-      delegationActive: true,
     });
     const updated = await this.repo.findOneBy({ id });
     if (!updated) throw new NotFoundException('User not found');

@@ -30,9 +30,10 @@ export class UserEntity {
   @Column({ nullable: true, type: 'text' })
   walletApiKey: string | null;
 
-  @Column({ default: false })
-  delegationActive: boolean;
-
   @CreateDateColumn()
   createdAt: Date;
+
+  isDelegated(): boolean {
+    return !!this.delegatedShare;
+  }
 }
