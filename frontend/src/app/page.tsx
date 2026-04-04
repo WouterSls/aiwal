@@ -60,7 +60,7 @@ export default function LandingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <main className="flex min-h-[75svh] items-center justify-center">
+      <main className="flex min-h-[80svh] items-center justify-center">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-6 md:px-10">
           <h1 className="text-8xl font-black uppercase tracking-tight">
             AIWAL
