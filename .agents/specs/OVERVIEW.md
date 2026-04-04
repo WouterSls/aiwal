@@ -4,9 +4,10 @@
 
 | Spec                                                              | Status   | Description                                                              |
 | ----------------------------------------------------------------- | -------- | ------------------------------------------------------------------------ |
-| [architecture.md](architecture/architecture.md)                   | NOT DONE | System architecture — frontend, backend, modules, deployment             |
-| [backend-core-modules.md](architecture/backend-core-modules.md)   | NOT DONE | Backend module map — AppModule wiring, auth flow, design order           |
-| [persistence-layer.md](architecture/persistence-layer.md)         | NOT DONE | Database schema — users, proposals, delegations, orders (TypeORM/SQLite) |
+| [architecture.md](architecture/architecture.md)                         | NOT DONE | System architecture — frontend, backend, modules, deployment             |
+| [backend-architecture.md](architecture/backend-architecture.md)         | NOT DONE | Express backend — TypeScript, Drizzle/SQLite, Zod, API key auth, route map |
+| [backend-core-modules.md](architecture/backend-core-modules.md)         | OUTDATED | NestJS module map — superseded by backend-architecture.md                |
+| [persistence-layer.md](architecture/persistence-layer.md)               | OUTDATED | TypeORM schema — superseded by backend-architecture.md (Drizzle)         |
 
 ## Backend Modules
 
