@@ -98,6 +98,7 @@ export class WalletService {
     dynamicWalletId: string;
     delegatedShare: string;
     walletApiKey: string;
+    walletAddress: string;
   }>;
 
   private encrypt(plaintext: string): string;
