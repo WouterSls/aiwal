@@ -3,40 +3,29 @@
 > Aiwal Backend · NestJS · MVP · April 2026
 
 ## Purpose
-Handles authentication via Dynamic SDK session validation, issues JWTs for subsequent requests, and provides the AuthGuard used globally.
+
+Verifies Dynamic SDK tokens on every request via JWKS signature check, finds or creates the user, and attaches them to `req.user`. No JWT issuance — Dynamic's token is the auth token.
 
 ## Dependencies
-- `@nestjs/jwt` — token signing/verification
-- `@nestjs/passport` — NOT used (unnecessary abstraction for single-strategy auth)
-- Dynamic SDK server-side — session token validation
+
+- Dynamic SDK JWKS endpoint — token signature verification
 - UsersModule — user lookup/creation
 
-## Configuration
+## Module
 
 ```typescript
 // auth/auth.module.ts
 
 @Module({
-  imports: [
-    JwtModule.registerAsync({
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: config.get<string>('JWT_EXPIRATION', '4h') },
-      }),
-      inject: [ConfigService],
-    }),
-    UsersModule,
-  ],
-  controllers: [AuthController],
-  providers: [AuthService, DynamicService],
-  exports: [JwtModule],
+  imports: [UsersModule],
+  providers: [DynamicService, DynamicAuthGuard],
 })
 export class AuthModule {}
 ```
 
 ## DynamicService
 
-Validates Dynamic SDK session tokens server-side.
+Verifies Dynamic SDK tokens locally using Dynamic's JWKS endpoint. Keys are fetched once and cached.
 
 ```typescript
 // auth/services/dynamic.service.ts
@@ -46,137 +35,56 @@ export class DynamicService {
   constructor(private config: ConfigService) {}
 
   /**
-   * Validates a Dynamic SDK session token by calling Dynamic's API.
-   * Returns the Dynamic user ID and wallet address if valid.
-   * Throws UnauthorizedException if invalid.
+   * Verifies a Dynamic SDK token via JWKS signature check (local, cached keys).
+   * Returns dynamicId and walletAddress if valid.
+   * Throws UnauthorizedException if invalid or expired.
    */
-  async validateSession(sessionToken: string): Promise<{
+  async verifyToken(token: string): Promise<{
     dynamicId: string;
     walletAddress: string;
-    email?: string;
   }>;
 }
 ```
 
-## AuthService
+> Requires `DYNAMIC_JWKS_URI` env var (e.g. `https://app.dynamicauth.com/api/v0/sdk/<env-id>/.well-known/jwks`).
 
-Orchestrates login: validates Dynamic session, finds/creates user, issues JWT.
+## DynamicAuthGuard
+
+Global guard. Verifies the Dynamic token and attaches the DB user to `req.user` on every request.
 
 ```typescript
-// auth/auth.service.ts
+// auth/guards/dynamic-auth.guard.ts
 
 @Injectable()
-export class AuthService {
+export class DynamicAuthGuard implements CanActivate {
   constructor(
     private dynamicService: DynamicService,
     private usersService: UsersService,
-    private jwtService: JwtService,
-  ) {}
-
-  /**
-   * Full login flow:
-   * 1. Validate Dynamic session token
-   * 2. Find or create user in DB
-   * 3. Issue JWT with user context
-   */
-  async login(sessionToken: string): Promise<{
-    accessToken: string;
-    user: UserResponseDto;
-  }>;
-
-  /**
-   * Verify an existing JWT and return the payload.
-   * Used by AuthGuard.
-   */
-  async verifyToken(token: string): Promise<JwtPayload>;
-}
-```
-
-**JWT Payload (lean — no mutable claims like preset):**
-```typescript
-{
-  sub: "user-uuid",
-  dynamicId: "dyn_abc123",
-  walletAddress: "0x..."
-}
-```
-
-> `preset` is stored in the DB and read via `UsersService` when needed (e.g. by AgentModule for context assembly). Keeping it out of the token avoids stale claims when the user changes preset mid-session.
-
-## JwtAuthGuard
-
-Global guard applied to all routes by default. Routes opt out via `@Public()` decorator.
-
-```typescript
-// auth/guards/jwt-auth.guard.ts
-
-@Injectable()
-export class JwtAuthGuard implements CanActivate {
-  constructor(
-    private jwtService: JwtService,
     private reflector: Reflector,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    // 1. Check for @Public() metadata → skip auth
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    // 1. Check @Public() metadata → skip auth
     // 2. Extract Bearer token from Authorization header
-    // 3. Verify JWT via jwtService.verify()
-    // 4. Attach payload to request.user
-    // 5. Throw UnauthorizedException if invalid/missing
+    // 3. DynamicService.verifyToken() → { dynamicId, walletAddress }
+    // 4. UsersService.findOrCreate({ dynamicId, walletAddress })
+    // 5. Attach user to request.user
+    // 6. Throw UnauthorizedException if anything fails
   }
 }
 ```
 
 > See CommonModule spec for the `@Public()` decorator definition.
 
-## AuthController
-
-```typescript
-// auth/auth.controller.ts
-
-@Controller('api/auth')
-export class AuthController {
-  constructor(private authService: AuthService) {}
-
-  /**
-   * POST /api/auth/session
-   * Body: { sessionToken: string }
-   * Response: { accessToken: string, user: UserResponseDto }
-   *
-   * Frontend calls this after Dynamic SDK login.
-   * Validates Dynamic session, creates user if needed, returns JWT.
-   */
-  @Public()
-  @Post('session')
-  async createSession(@Body() dto: CreateSessionDto): Promise<{
-    accessToken: string;
-    user: UserResponseDto;
-  }>;
-
-}
-```
-
-## DTOs
-
-```typescript
-// auth/dto/create-session.dto.ts
-
-export class CreateSessionDto {
-  @IsString()
-  @IsNotEmpty()
-  sessionToken: string;
-}
-```
-
 ## Global Guard Registration
 
 ```typescript
-// app.module.ts — register AuthGuard globally
+// app.module.ts
 
 providers: [
   {
     provide: APP_GUARD,
-    useClass: JwtAuthGuard,
+    useClass: DynamicAuthGuard,
   },
 ],
 ```
@@ -184,38 +92,35 @@ providers: [
 ## Auth Flow Diagram
 
 ```
-Frontend                       Backend
-   │                              │
-   │── Dynamic SDK login ──►      │
-   │◄── session token ──────      │
-   │                              │
-   │── POST /api/auth/session ──► │
-   │   { sessionToken }          │
-   │                              ├── DynamicService.validateSession()
-   │                              │      → calls Dynamic API
-   │                              ├── UsersService.findOrCreate()
-   │                              ├── JwtService.sign(payload)
-   │                              │
-   │◄── { accessToken, user } ── │
-   │                              │
-   │── GET /api/chat ──────────► │
-   │   Authorization: Bearer JWT  │
-   │                              ├── JwtAuthGuard.canActivate()
-   │                              │      → verify JWT, attach to req.user
-   │                              ├── Controller handles request
-   │◄── response ─────────────── │
+User              Frontend                       Backend
+ │                    │                              │
+ │── connect ────────►│                              │
+ │                    │── Dynamic SDK login ──►      │
+ │                    │◄── authToken (Dynamic JWT) ──│
+ │                    │                              │
+ │                    │── GET /api/users/me ────────►│
+ │                    │   Authorization: Bearer      │
+ │                    │   <Dynamic JWT>              │
+ │                    │                              ├── DynamicAuthGuard
+ │                    │                              │   ├── JWKS verify (cached)
+ │                    │                              │   └── findOrCreate user
+ │                    │                              │       → attach to req.user
+ │                    │                              ├── Controller handles request
+ │                    │◄── { user } ────────────────│
+ │                    │                              │
+ │                    │  if user.preset === null      │
+ │                    │  → redirect to /onboard      │
 ```
 
+Dynamic SDK auto-refreshes `authToken` before expiry — frontend needs no refresh logic.
+
 ## File Structure
+
 ```
 src/auth/
 ├── auth.module.ts
-├── auth.controller.ts
-├── auth.service.ts
 ├── services/
 │   └── dynamic.service.ts
-├── guards/
-│   └── jwt-auth.guard.ts
-└── dto/
-    └── create-session.dto.ts
+└── guards/
+    └── dynamic-auth.guard.ts
 ```

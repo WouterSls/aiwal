@@ -9,23 +9,18 @@ Shared infrastructure used across all backend modules — guards, decorators, DT
 
 ### `@CurrentUser()` Decorator
 
-Parameter decorator that extracts the authenticated user from the request object (set by AuthGuard).
+Parameter decorator that extracts the authenticated user from the request object (set by `DynamicAuthGuard`). `req.user` is the full `User` entity from the DB.
 
 ```typescript
 // common/decorators/current-user.decorator.ts
 
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-
-export interface JwtPayload {
-  sub: string;           // user.id
-  dynamicId: string;     // Dynamic SDK user ID
-  walletAddress: string; // embedded wallet on Base
-}
+import { User } from '../../users/user.entity';
 
 export const CurrentUser = createParamDecorator(
-  (data: keyof JwtPayload | undefined, ctx: ExecutionContext): JwtPayload | string => {
+  (data: keyof User | undefined, ctx: ExecutionContext): User | unknown => {
     const request = ctx.switchToHttp().getRequest();
-    const user = request.user as JwtPayload;
+    const user = request.user as User;
     return data ? user[data] : user;
   },
 );
@@ -33,8 +28,8 @@ export const CurrentUser = createParamDecorator(
 
 **Usage:**
 ```typescript
-@Get('profile')
-getProfile(@CurrentUser() user: JwtPayload) { ... }
+@Get('me')
+getMe(@CurrentUser() user: User) { ... }
 
 @Get('wallet')
 getWallet(@CurrentUser('walletAddress') address: string) { ... }
