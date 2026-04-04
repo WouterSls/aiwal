@@ -1,3 +1,5 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 interface TokenRowProps {
   symbol: string;
   balance: string;
@@ -9,13 +11,12 @@ export function TokenRow({ symbol, balance, usdValue, icon }: TokenRowProps) {
   return (
     <div className="flex items-center justify-between border-b border-black/10 py-3">
       <div className="flex items-center gap-3">
-        {icon ? (
-          <img src={icon} alt={symbol} className="h-8 w-8 rounded-full" />
-        ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black text-xs font-bold">
+        <Avatar>
+          <AvatarImage src={icon} alt={symbol} />
+          <AvatarFallback className="text-xs font-bold border border-black bg-transparent">
             {symbol.slice(0, 2)}
-          </div>
-        )}
+          </AvatarFallback>
+        </Avatar>
         <span className="font-medium uppercase tracking-widest text-sm">
           {symbol}
         </span>

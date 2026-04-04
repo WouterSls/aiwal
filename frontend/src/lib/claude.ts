@@ -1,39 +1,51 @@
-export interface TransactionProposal {
-  type: "swap" | "limit_order" | "stop_loss" | "take_profit";
-  action: "buy" | "sell";
+// order
+export interface Trade {
+  type: "send" | "swap" | "limit_order";
+  amount_in: string;
+  expected_out: string | null;
+  slippage_tolerance: string | null;
+  tradingPriceUsd: number | null;
+  to: string | null;
+}
+
+// proposal
+export interface TradingStrategy {
+  title: string;
+  reasoning: string;
   token_in: string;
   token_out: string;
-  amount_in: string;
-  expected_out: string;
-  slippage_tolerance: string;
-  condition: string | null;
-  reasoning: string;
+  trades: Trade[];
 }
 
 export interface ParsedAgentResponse {
   text: string;
-  proposal: TransactionProposal | null;
+  strategy: TradingStrategy | null;
 }
 
 export function parseAgentResponse(content: string): ParsedAgentResponse {
   const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
 
   if (!jsonMatch) {
-    return { text: content, proposal: null };
+    return { text: content, strategy: null };
   }
 
   try {
     const parsed = JSON.parse(jsonMatch[1]);
-    const required = ["type", "action", "token_in", "token_out", "amount_in"];
-    const valid = required.every((field) => parsed[field]);
+    const valid =
+      parsed.title &&
+      parsed.token_in &&
+      parsed.token_out &&
+      Array.isArray(parsed.trades) &&
+      parsed.trades.length > 0 &&
+      parsed.trades.every((t: Trade) => t.type && t.amount_in);
 
     if (!valid) {
-      return { text: content, proposal: null };
+      return { text: content, strategy: null };
     }
 
     const text = content.replace(/```json[\s\S]*?```/, "").trim();
-    return { text, proposal: parsed as TransactionProposal };
+    return { text, strategy: parsed as TradingStrategy };
   } catch {
-    return { text: content, proposal: null };
+    return { text: content, strategy: null };
   }
 }

@@ -42,11 +42,16 @@ export default function LandingPage() {
               { headers: { Authorization: `Bearer ${token}` } },
             );
 
-            if (res.ok) {
-              router.push("/dashboard");
-            } else {
+            if (res.status === 404) {
               router.push("/onboard");
+              return;
             }
+
+            if (!res.ok) {
+              throw new Error("Failed to fetch user profile");
+            }
+
+            router.push("/dashboard");
           } catch {
             toast.error("Something went wrong. Please reconnect.");
           }

@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ProposalRow } from "@/components/proposal-row";
-import { API_URL } from "@/lib/api";
 
 interface Order {
   id: string;
@@ -16,7 +15,7 @@ interface Order {
 }
 
 async function fetchOrders(): Promise<Order[]> {
-  const res = await fetch(`${API_URL}/api/orders`);
+  const res = await fetch(`/api/orders`);
   if (!res.ok) throw new Error("Failed to fetch orders");
   return res.json();
 }
@@ -25,6 +24,7 @@ export function ProposalsHistory() {
   const { data: orders } = useQuery({
     queryKey: ["orders"],
     queryFn: fetchOrders,
+    refetchInterval: 5000,
   });
 
   return (

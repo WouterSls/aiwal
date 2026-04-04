@@ -33,11 +33,11 @@ export default function OnboardPage() {
     async function checkExistingUser() {
       const address = accounts[0].address;
       const res = await fetch(`/api/users?walletAddress=${address}`);
-      if (res.ok) {
-        router.replace("/dashboard");
+      if (res.status === 404) {
+        setWalletAddress(address);
         return;
       }
-      setWalletAddress(address);
+      router.replace("/dashboard");
     }
 
     checkExistingUser();

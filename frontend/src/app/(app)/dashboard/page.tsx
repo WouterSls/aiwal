@@ -5,56 +5,22 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { getWalletAccounts, onEvent } from "@dynamic-labs-sdk/client";
 import { dynamicClient } from "@/lib/dynamic";
-import { parseAgentResponse, TransactionProposal } from "@/lib/claude";
+import { parseAgentResponse, TradingStrategy } from "@/lib/claude";
+import { buildSystemPrompt, TradePreset } from "@/lib/presets";
 import { PortfolioView } from "@/components/portfolio-view";
 import { ProposalEditor } from "@/components/proposal-editor";
 import { ChatPanel, ChatMessage } from "@/components/chat-panel";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ProposalsHistory } from "@/components/proposals-history";
 
-const SYSTEM_PROMPT = `You are the Aiwal trading agent on Base L2.
-
-## Response Rules
-
-You MUST respond in one of these three formats:
-
-### Format 1: Transaction Proposal
-When the user wants to execute a trade, wrap your proposal in a \`\`\`json code block with this exact structure:
-
-\`\`\`json
-{
-  "type": "swap" | "limit_order" | "stop_loss" | "take_profit",
-  "action": "buy" | "sell",
-  "token_in": "<symbol>",
-  "token_out": "<symbol>",
-  "amount_in": "<amount as string>",
-  "expected_out": "<amount as string>",
-  "slippage_tolerance": "<percentage as string>",
-  "condition": "<price condition if limit/SL/TP, null for swap>",
-  "reasoning": "<1-2 sentence explanation>"
-}
-\`\`\`
-
-You may include conversational text before or after the JSON block.
-
-### Format 2: Informational Response
-When the user asks about market conditions, portfolio, strategy, or anything that doesn't require a trade.
-
-### Format 3: Clarifying Question
-When the user's intent is ambiguous or missing critical details.
-
-## Constraints
-- NEVER propose a trade for more than the user's available balance
-- ALWAYS include reasoning for any proposal
-- All amounts must be strings to preserve decimal precision`;
-
 export default function DashboardPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeProposal, setActiveProposal] =
-    useState<TransactionProposal | null>(null);
+    useState<TradingStrategy | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [preset, setPreset] = useState<TradePreset | null>(null);
 
   const [mounted, setMounted] = useState(false);
   const [authorized, setAuthorized] = useState(false);
@@ -78,11 +44,13 @@ export default function DashboardPage() {
     async function checkUserProfile() {
       const address = accounts[0].address;
       const res = await fetch(`/api/users?walletAddress=${address}`);
-      if (!res.ok) {
+      if (res.status === 404) {
         router.replace("/onboard");
-      } else {
-        setAuthorized(true);
+        return;
       }
+      const user = await res.json();
+      setPreset(user.preset as TradePreset);
+      setAuthorized(true);
     }
 
     checkUserProfile();
@@ -96,9 +64,38 @@ export default function DashboardPage() {
     return offLogout;
   }, [router]);
 
+  function buildCurrentSystemPrompt(): string | null {
+    if (!preset || !accounts[0]) return null;
+
+    const address = accounts[0].address;
+    const portfolio =
+      queryClient.getQueryData<{ symbol: string; balance: string }[]>([
+        "portfolio",
+        address,
+      ]) ?? [];
+    const prices =
+      queryClient.getQueryData<Record<string, string>>(["prices"]) ?? {};
+    const orders =
+      queryClient.getQueryData<
+        {
+          id: string;
+          type: string;
+          token_in: string;
+          token_out: string;
+          amount_in: string;
+          status: string;
+        }[]
+      >(["orders"]) ?? [];
+
+    return buildSystemPrompt(preset, address, portfolio, prices, orders);
+  }
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (loading) return;
+
+      const system = buildCurrentSystemPrompt();
+      if (!system) return;
 
       const userMsg: ChatMessage = { role: "user", content: text };
       const nextMessages = [...messages, userMsg].slice(-25);
@@ -114,7 +111,7 @@ export default function DashboardPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            system: SYSTEM_PROMPT,
+            system,
             messages: nextMessages.map((m) => ({
               role: m.role,
               content: m.content,
@@ -138,13 +135,16 @@ export default function DashboardPage() {
           setStreamingContent(full);
         }
 
-        const { text, proposal } = parseAgentResponse(full);
-        const assistantMsg: ChatMessage = { role: "assistant", content: text };
+        const { text: responseText, strategy } = parseAgentResponse(full);
+        const assistantMsg: ChatMessage = {
+          role: "assistant",
+          content: responseText,
+        };
         setMessages((prev) => [...prev, assistantMsg]);
         setStreamingContent(null);
 
-        if (proposal) {
-          setActiveProposal(proposal);
+        if (strategy) {
+          setActiveProposal(strategy);
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
@@ -158,7 +158,8 @@ export default function DashboardPage() {
         setLoading(false);
       }
     },
-    [loading, messages],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loading, messages, preset, accounts],
   );
 
   async function handleConfirm() {
@@ -173,11 +174,23 @@ export default function DashboardPage() {
     } finally {
       setConfirmOpen(false);
       setActiveProposal(null);
+      const doneMsg: ChatMessage = {
+        role: "assistant",
+        content: "Order submitted. Starting fresh — what's next?",
+      };
+      setMessages([doneMsg]);
+      setTimeout(() => setMessages([]), 2500);
     }
   }
 
   function handleCancelProposal() {
+    const rejectMsg: ChatMessage = {
+      role: "assistant",
+      content: "No worries — proposal rejected. Starting fresh, what's next?",
+    };
+    setMessages([rejectMsg]);
     setActiveProposal(null);
+    setTimeout(() => setMessages([]), 2500);
   }
 
   if (!mounted || !accounts.length || !authorized) return null;
@@ -188,7 +201,7 @@ export default function DashboardPage() {
         <div className="w-1/2 overflow-hidden border-r border-black">
           {activeProposal ? (
             <ProposalEditor
-              proposal={activeProposal}
+              strategy={activeProposal}
               onChange={setActiveProposal}
               onConfirm={() => setConfirmOpen(true)}
               onCancel={handleCancelProposal}
@@ -211,7 +224,7 @@ export default function DashboardPage() {
 
       {activeProposal && (
         <ConfirmationModal
-          proposal={activeProposal}
+          strategy={activeProposal}
           open={confirmOpen}
           onConfirm={handleConfirm}
           onCancel={() => setConfirmOpen(false)}

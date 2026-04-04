@@ -1,43 +1,40 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { getWalletAccounts } from "@dynamic-labs-sdk/client";
+import { dynamicClient } from "@/lib/dynamic";
 import { TokenRow } from "@/components/token-row";
+
 interface PortfolioToken {
   symbol: string;
   balance: string;
-  icon?: string;
+  logoURI?: string;
 }
 
 interface PriceData {
   [symbol: string]: string;
 }
 
-async function fetchPortfolio(): Promise<PortfolioToken[]> {
-  return [
-    { symbol: "ETH", balance: "1.842" },
-    { symbol: "USDC", balance: "3420.00" },
-    { symbol: "WBTC", balance: "0.045" },
-  ];
-}
-
-async function fetchPrices(): Promise<PriceData> {
-  return {
-    ETH: "3180.50",
-    USDC: "1.00",
-    WBTC: "68200.00",
-  };
-}
-
 export function PortfolioView() {
-  const { data: portfolio } = useQuery({
-    queryKey: ["portfolio"],
-    queryFn: fetchPortfolio,
+  const accounts = getWalletAccounts(dynamicClient);
+  const address = accounts[0]?.address;
+
+  const { data: portfolio } = useQuery<PortfolioToken[]>({
+    queryKey: ["portfolio", address],
+    queryFn: async () => {
+      const res = await fetch(`/api/portfolio?address=${address}`);
+      return res.json();
+    },
+    enabled: !!address,
     refetchInterval: 30_000,
   });
 
-  const { data: prices } = useQuery({
+  const { data: prices } = useQuery<PriceData>({
     queryKey: ["prices"],
-    queryFn: fetchPrices,
+    queryFn: async () => {
+      const res = await fetch("/api/prices");
+      return res.json();
+    },
     refetchInterval: 30_000,
   });
 
@@ -61,6 +58,7 @@ export function PortfolioView() {
               key={token.symbol}
               symbol={token.symbol}
               balance={token.balance}
+              icon={token.logoURI}
               usdValue={
                 prices?.[token.symbol]
                   ? (
@@ -69,7 +67,6 @@ export function PortfolioView() {
                     ).toFixed(2)
                   : "—"
               }
-              icon={token.icon}
             />
           ))
         )}
