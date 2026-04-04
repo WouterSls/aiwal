@@ -4,11 +4,14 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpException,
+  HttpStatus,
   NotFoundException,
   Param,
   Post,
 } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { UserEntity } from '../users/user.entity';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { CreateProposalDto } from './dto/create-proposal.dto';
 import { ProposalResponseDto } from './dto/proposal-response.dto';
@@ -24,11 +27,14 @@ export class ProposalsController {
 
   @Post()
   async create(
-    @CurrentUser('id') userId: string,
+    @CurrentUser() user: UserEntity,
     @Body() dto: CreateProposalDto,
   ): Promise<ProposalResponseDto> {
+    if (!user.isDelegated()) {
+      throw new HttpException({ code: 'DELEGATION_REQUIRED' }, HttpStatus.CONFLICT);
+    }
     const proposal = await this.proposalsService.create({
-      userId,
+      userId: user.id,
       title: dto.title,
       reasoning: dto.reasoning,
       tokenIn: dto.tokenIn,
