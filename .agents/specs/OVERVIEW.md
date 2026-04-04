@@ -4,9 +4,10 @@
 
 | Spec                                                              | Status   | Description                                                              |
 | ----------------------------------------------------------------- | -------- | ------------------------------------------------------------------------ |
-| [architecture.md](architecture/architecture.md)                   | NOT DONE | System architecture — frontend, backend, modules, deployment             |
-| [backend-core-modules.md](architecture/backend-core-modules.md)   | NOT DONE | Backend module map — AppModule wiring, auth flow, design order           |
-| [persistence-layer.md](architecture/persistence-layer.md)         | NOT DONE | Database schema — users, proposals, delegations, orders (TypeORM/SQLite) |
+| [architecture.md](architecture/architecture.md)                         | NOT DONE | System architecture — frontend, backend, modules, deployment             |
+| [backend-architecture.md](architecture/backend-architecture.md)         | NOT DONE | Express backend — TypeScript, Drizzle/SQLite, Zod, API key auth, route map |
+| [backend-core-modules.md](architecture/backend-core-modules.md)         | OUTDATED | NestJS module map — superseded by backend-architecture.md                |
+| [persistence-layer.md](architecture/persistence-layer.md)               | OUTDATED | TypeORM schema — superseded by backend-architecture.md (Drizzle)         |
 
 ## Backend Modules
 
@@ -32,6 +33,9 @@
 | [connect-button.md](frontend/connect-button.md)                             | NOT DONE | Connect button — Dynamic JS SDK auth, email OTP + social login via custom modal                                     |
 | [dashboard.md](frontend/dashboard.md)                                       | NOT DONE | Dashboard — `/dashboard` route, 50/50 chat+portfolio layout, proposal editor, proposals history                     |
 | [onboard-page.md](frontend/onboard-page.md)                                 | NOT DONE | Onboard page — `/onboard` route, one-time preset selection for new users                                            |
+| [wallet-delegation.md](frontend/wallet-delegation.md)                       | NOT DONE | Wallet delegation — Dynamic SDK delegated access setup, dashboard guard, status hook                                |
+| [proposal-editor.md](frontend/proposal-editor.md)                           | NOT DONE | ProposalEditor — strategy editor with collapsible trade rows, add/remove trades, atomic confirm                     |
+| [proposal-confirmation-flow.md](frontend/proposal-confirmation-flow.md)     | NOT DONE | Proposal confirmation — delegation check, initDelegationProcess if needed, POST /api/orders, thank-you state        |
 | [footer.md](frontend/footer.md)                                             | NOT DONE | Footer — landing page only, multi-column editorial footer                                                           |
 | [legal-pages.md](frontend/legal-pages.md)                                   | NOT DONE | Legal pages — `/privacy` and `/terms` routes                                                                        |
 
@@ -39,7 +43,7 @@
 
 | Spec                                                                   | Status   | Description                                                                                            |
 | ---------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------ |
-| [claude-interaction.md](llm-context-integration/claude-interaction.md) | NOT DONE | Claude API interaction — frontend-direct calls, context assembly, response parsing, proposal detection |
+| [claude-interaction.md](llm-context-integration/claude-interaction.md) | NOT DONE | Claude API interaction — Next.js proxy, context assembly, strategy parsing (multi-trade), proposal detection |
 
 ## Agent Presets
 

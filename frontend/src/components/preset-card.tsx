@@ -14,8 +14,9 @@ const PRESETS: Record<
     description:
       "Conservative strategy focused on blue chip assets. Limited to established tokens with deep liquidity.",
     traits: [
+      "Risk averse investing and trading",
       "Blue chip tokens only",
-      "Max 5% position size",
+      "Max 5% position size per trade",
       "0.5% slippage tolerance",
       "Gradual entry & exit",
     ],
@@ -26,8 +27,9 @@ const PRESETS: Record<
     description:
       "Aggressive strategy with high risk tolerance. Any token available on Uniswap Base is fair game.",
     traits: [
+      "Full ape, make me rich",
       "Any Uniswap Base token",
-      "Up to 100% position size",
+      "Up to 100% position size per trade",
       "5% slippage tolerance",
       "Aggressive entry & exit",
     ],

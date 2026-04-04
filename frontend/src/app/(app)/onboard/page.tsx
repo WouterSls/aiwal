@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getWalletAccounts } from "@dynamic-labs-sdk/client";
+import { getWalletAccounts, onEvent } from "@dynamic-labs-sdk/client";
 import { dynamicClient } from "@/lib/dynamic";
 import { PresetCard } from "@/components/preset-card";
 
@@ -10,27 +10,45 @@ type Preset = "institutional" | "degen";
 
 export default function OnboardPage() {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const checkedRef = useRef(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    async function guard() {
-      const accounts = await getWalletAccounts(dynamicClient);
-      const address = accounts[0]?.address ?? "mock";
+  const accounts = getWalletAccounts(dynamicClient);
 
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (mounted && !accounts.length) {
+      router.push("/");
+    }
+  }, [mounted, accounts.length, router]);
+
+  useEffect(() => {
+    if (!mounted || !accounts.length || checkedRef.current) return;
+    checkedRef.current = true;
+
+    async function checkExistingUser() {
+      const address = accounts[0].address;
       const res = await fetch(`/api/users?walletAddress=${address}`);
-      if (res.ok) {
-        router.replace("/dashboard");
+      if (res.status === 404) {
+        setWalletAddress(address);
         return;
       }
-
-      setWalletAddress(address);
-      setReady(true);
+      router.replace("/dashboard");
     }
 
-    guard();
+    checkExistingUser();
+  }, [mounted, accounts, router]);
+
+  useEffect(() => {
+    const offLogout = onEvent(
+      { event: "logout", listener: () => router.push("/") },
+      dynamicClient,
+    );
+    return offLogout;
   }, [router]);
 
   async function handleContinue() {
@@ -46,7 +64,7 @@ export default function OnboardPage() {
     router.push("/dashboard");
   }
 
-  if (!ready) return null;
+  if (!mounted || !accounts.length || !walletAddress) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center px-6 md:px-10">

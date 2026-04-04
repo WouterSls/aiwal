@@ -9,7 +9,8 @@ Executes confirmed orders on Uniswap using Dynamic delegated wallets. Listens fo
 ## Dependencies
 
 - `WalletModule` — `WalletService.getDecryptedDelegation()`
-- `@dynamic-labs-wallet/node` — `createDelegatedEvmWalletClient`
+- `@dynamic-labs-wallet/node-evm` — `createDelegatedEvmWalletClient`, `delegatedSignTransaction`
+- `ethers` — `JsonRpcProvider` for broadcasting signed transactions
 - `EventEmitter2` — receives `order.execute` from OrdersModule; emits `order.executed` back
 - Uniswap API — swap calldata for on-chain execution
 
@@ -29,11 +30,16 @@ export class ExecutionModule {}
 
 Listens for `order.execute` events, builds and submits the swap transaction, then reports the result back via `order.executed`.
 
+The delegated client and RPC provider are created once as singletons in `onModuleInit`.
+
 ```typescript
 // execution/execution.service.ts
 
 @Injectable()
 export class ExecutionService implements OnModuleInit {
+  private delegatedClient: DelegatedEvmWalletClient;
+  private provider: JsonRpcProvider;
+
   constructor(
     private walletService: WalletService,
     private eventEmitter: EventEmitter2,
@@ -41,17 +47,32 @@ export class ExecutionService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
+    this.delegatedClient = createDelegatedEvmWalletClient({
+      environmentId: this.config.get('DYNAMIC_ENVIRONMENT_ID'),
+      apiKey: this.config.get('DYNAMIC_API_KEY'),
+    });
+    this.provider = new JsonRpcProvider(this.config.get('BASE_RPC_URL'));
     this.eventEmitter.on('order.execute', this.onExecute.bind(this));
   }
 
   private async onExecute(payload: OrderExecutePayload): Promise<void>;
-  // 1. WalletService.getDecryptedDelegation(userId) → { dynamicWalletId, delegatedShare, walletApiKey, walletAddress }
+  // 1. WalletService.getDecryptedDelegation(userId)
+  //    → { dynamicWalletId, delegatedShare, walletApiKey, walletAddress }
+  //    delegatedShare is stored as JSON string → JSON.parse() into ServerKeyShare
   //    Throws NotFoundException if user has no delegation → caught below → emits failure
   // 2. fetchSwapCalldata(tokenIn, tokenOut, amountIn, walletAddress, slippageTolerance)
   //    → { to, value, data }
-  // 3. createDelegatedEvmWalletClient({ walletId, walletApiKey, keyShare }) → client
-  // 4. client.sendTransaction({ to, value, data }) → confirmationHash
-  // 5. emit 'order.executed' with { orderId, confirmationHash, success: true }
+  // 3. Build TransactionSerializable:
+  //    - nonce: await this.provider.getTransactionCount(walletAddress)
+  //    - feeData: await this.provider.getFeeData()
+  //    - chainId: 8453 (Base)
+  //    - gasLimit: 200_000n
+  //    - type: 2 (EIP-1559)
+  // 4. delegatedSignTransaction(this.delegatedClient, { walletId, walletApiKey, keyShare, transaction })
+  //    → signedTx (hex string)
+  // 5. this.provider.broadcastTransaction(signedTx) → txResponse
+  //    txResponse.wait() → receipt
+  // 6. emit 'order.executed' with { orderId, confirmationHash: receipt.hash, success: true }
   //
   // On any error:
   //   emit 'order.executed' with { orderId, success: false }
@@ -105,21 +126,27 @@ EventEmitter: 'order.execute'
   │
   ├── WalletService.getDecryptedDelegation(userId)
   │     → { dynamicWalletId, delegatedShare, walletApiKey, walletAddress }
+  │     JSON.parse(delegatedShare) → ServerKeyShare
   │     throws NotFoundException if no active delegation
   │
   ├── fetchSwapCalldata(tokenIn, tokenOut, amountIn, walletAddress, slippageTolerance)
   │     GET {UNISWAP_API_URL}/swap → { to, value, data }
   │
-  ├── createDelegatedEvmWalletClient({
+  ├── provider.getTransactionCount(walletAddress) → nonce
+  ├── provider.getFeeData() → { maxFeePerGas, maxPriorityFeePerGas }
+  │
+  ├── delegatedSignTransaction(delegatedClient, {
   │     walletId: dynamicWalletId,
   │     walletApiKey,
-  │     keyShare: delegatedShare,
+  │     keyShare,           // ServerKeyShare object
+  │     transaction: { to, value, data, chainId: 8453, nonce, gasLimit, maxFeePerGas, ... }
   │   })
+  │     → signedTx (hex string)
   │
-  ├── client.sendTransaction({ to, value, data })
-  │     → confirmationHash
+  ├── provider.broadcastTransaction(signedTx)
+  │     → txResponse.wait() → receipt
   │
-  └── emit 'order.executed' { orderId, confirmationHash, success: true }
+  └── emit 'order.executed' { orderId, confirmationHash: receipt.hash, success: true }
 
 On any failure:
   └── emit 'order.executed' { orderId, success: false }
@@ -170,14 +197,27 @@ export class AppModule {}
 ## Environment Variables
 
 ```
-UNISWAP_API_URL=   # Uniswap API base URL (shared with PriceFeedModule)
+DYNAMIC_ENVIRONMENT_ID=   # Dynamic environment ID
+DYNAMIC_API_KEY=          # Dynamic server API key (from Dynamic dashboard)
+BASE_RPC_URL=             # Base mainnet RPC endpoint
+UNISWAP_API_URL=          # Uniswap API base URL (shared with PriceFeedModule)
 ```
 
 ## Required Packages
 
 ```
-@dynamic-labs-wallet/node   # already added by WalletModule
-@nestjs/event-emitter        # already added by OrdersModule
+@dynamic-labs-wallet/node-evm   # delegated EVM signing
+ethers                           # RPC provider + broadcast
+@nestjs/event-emitter            # already added by OrdersModule
+```
+
+## keyShare Storage Note
+
+`delegatedShare` is stored in the DB as a JSON string (result of `JSON.stringify(serverKeyShare)`).
+Before calling `delegatedSignTransaction`, deserialize it back:
+
+```typescript
+const keyShare: ServerKeyShare = JSON.parse(delegatedShare);
 ```
 
 ## File Structure
