@@ -15,12 +15,12 @@ Parameter decorator that extracts the authenticated user from the request object
 // common/decorators/current-user.decorator.ts
 
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { User } from '../../users/user.entity';
+import { UserEntity } from '../../users/user.entity';
 
 export const CurrentUser = createParamDecorator(
-  (data: keyof User | undefined, ctx: ExecutionContext): User | unknown => {
+  (data: keyof UserEntity | undefined, ctx: ExecutionContext): UserEntity | unknown => {
     const request = ctx.switchToHttp().getRequest();
-    const user = request.user as User;
+    const user = request.user as UserEntity;
     return data ? user[data] : user;
   },
 );

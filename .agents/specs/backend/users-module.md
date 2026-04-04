@@ -37,7 +37,8 @@ NestJS injects by class token — no Symbol needed. The abstract class IS the DI
 export abstract class UserRepository {
   abstract findById(id: string): Promise<User | null>;
   abstract findByDynamicId(dynamicId: string): Promise<User | null>;
-  abstract create(data: { dynamicId: string; walletAddress: string }): Promise<User>;
+  abstract findByWalletAddress(walletAddress: string): Promise<User | null>;
+  abstract create(data: { dynamicId: string; walletAddress: string; preset?: TradingPreset }): Promise<User>;
   abstract updatePreset(id: string, preset: TradingPreset): Promise<User>;
   abstract updateDelegation(id: string, data: { dynamicWalletId: string; delegatedShare: string; walletApiKey: string }): Promise<User>;
 }
@@ -57,7 +58,8 @@ export class TypeOrmUserRepository extends UserRepository {
 
   async findById(id: string): Promise<User | null>;
   async findByDynamicId(dynamicId: string): Promise<User | null>;
-  async create(data: { dynamicId: string; walletAddress: string }): Promise<User>;
+  async findByWalletAddress(walletAddress: string): Promise<User | null>;
+  async create(data: { dynamicId: string; walletAddress: string; preset?: TradingPreset }): Promise<User>;
   async updatePreset(id: string, preset: TradingPreset): Promise<User>;
   async updateDelegation(id: string, data: { dynamicWalletId: string; delegatedShare: string; walletApiKey: string }): Promise<User>;
 }
@@ -76,7 +78,9 @@ export class UsersService {
 
   async findById(id: string): Promise<User>;
   async findByDynamicId(dynamicId: string): Promise<User | null>;
+  async findByWalletAddress(walletAddress: string): Promise<User | null>;
   async findOrCreate(data: { dynamicId: string; walletAddress: string }): Promise<User>;
+  async create(data: { dynamicId: string; walletAddress: string; preset: TradingPreset }): Promise<User>;
   async updatePreset(id: string, preset: TradingPreset): Promise<User>;
   async updateDelegation(id: string, data: { dynamicWalletId: string; delegatedShare: string; walletApiKey: string }): Promise<User>;
 }
@@ -93,8 +97,19 @@ Clean injection — `UserRepository` is the abstract class token, NestJS resolve
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
+  // Public — no auth required
+  @Public()
+  @Get()
+  async findByWalletAddress(@Query('walletAddress') walletAddress: string): Promise<UserResponseDto>;
+  // → 200 + UserResponseDto if found, 404 if not
+
+  @Public()
+  @Post()
+  async createUser(@Body() dto: CreateUserDto): Promise<UserResponseDto>;
+  // → 201 + UserResponseDto
+
   @Get('me')
-  async getMe(@CurrentUser('id') userId: string): Promise<UserResponseDto>;
+  async getMe(@CurrentUser() user: User): Promise<UserResponseDto>;
 
   @Patch('me/preset')
   async updatePreset(
@@ -107,6 +122,19 @@ export class UsersController {
 ## DTOs
 
 ```typescript
+// users/dto/create-user.dto.ts
+
+export class CreateUserDto {
+  @IsString() @IsNotEmpty()
+  dynamicId: string;
+
+  @IsString() @IsNotEmpty()
+  walletAddress: string;
+
+  @IsIn(['institutional', 'degen'])
+  preset: TradingPreset;
+}
+
 // users/dto/update-preset.dto.ts
 
 export class UpdatePresetDto {
@@ -155,6 +183,7 @@ src/users/
 ├── user.repository.ts
 ├── typeorm-user.repository.ts
 └── dto/
-    ├── user-response.dto.ts
-    └── update-preset.dto.ts
+    ├── create-user.dto.ts
+    ├── update-preset.dto.ts
+    └── user-response.dto.ts
 ```
