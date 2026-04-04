@@ -92,12 +92,10 @@ DYNAMIC_ENVIRONMENT_ID=  # Dynamic environment ID
 
 | # | Module | Status | Depends on |
 |---|--------|--------|------------|
-| 1 | **WalletModule** | Not started | UsersModule, Dynamic SDK |
-| 2 | **PriceFeedModule** | Not started | Chainlink CRE |
-| 3 | **OrdersModule** | Not started | UsersModule, PriceFeedModule, persistence layer |
-| 4 | **ExecutionModule** | Not started | WalletModule, Uniswap API, persistence layer |
-| 5 | **AgentModule** | Not started | WalletModule, OrdersModule, PriceFeedModule, Claude API |
-| 6 | **ChatModule** | Not started | AgentModule, OrdersModule, WebSocket gateway |
+| 1 | **PriceFeedModule** | Not started | Chainlink CRE |
+| 2 | **OrdersModule** | Not started | UsersModule, PriceFeedModule, persistence layer |
+| 3 | **ExecutionModule** | Not started | WalletModule, Uniswap API, persistence layer |
+| 4 | **AgentModule** | Not started | WalletModule, OrdersModule, PriceFeedModule, Claude API |
 
 ### Design order
 
