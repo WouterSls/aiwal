@@ -18,6 +18,7 @@
 | [wallet-module.md](backend/wallet-module.md) | NOT DONE | WalletModule — Dynamic delegation webhook, AES-256 at-rest encryption, delegation material access |
 | [pricefeed-module.md](backend/pricefeed-module.md) | NOT DONE | PriceFeedModule — Uniswap Quoter API prices, Base block listener, order condition monitoring |
 | [orders-module.md](backend/orders-module.md) | NOT DONE | OrdersModule — proposal + order CRUD, market/conditional dispatch, EventEmitter2 execution handoff |
+| [execution-module.md](backend/execution-module.md) | NOT DONE | ExecutionModule — Dynamic delegated wallet, Uniswap swap execution, order.execute event handler |
 
 ## Frontend
 

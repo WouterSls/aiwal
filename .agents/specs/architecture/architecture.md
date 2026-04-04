@@ -292,12 +292,12 @@ const signature = await client.signTransaction({
 
 #### 2.6 ChatModule — WebSocket Gateway
 
-Handles real-time communication between frontend and backend: streaming Claude responses and order status updates. Depends on AgentModule, OrdersModule.
+Handles real-time communication between frontend and backend: order status updates. Depends on OrdersModule.
 
 ### Module Design Order
 
 ```
-WalletModule → PriceFeedModule → OrdersModule → ExecutionModule → AgentModule → ChatModule
+WalletModule → PriceFeedModule → OrdersModule → ExecutionModule
 ```
 
 ---
@@ -448,7 +448,6 @@ aiwal/
 │       │   ├── pricefeed/      # PriceFeedModule — Chainlink CRE price feeds
 │       │   ├── orders/         # OrdersModule — proposals, order lifecycle
 │       │   ├── execution/      # ExecutionModule — Uniswap swap execution
-│       │   ├── agent/          # AgentModule — Claude API, context injection
 │       │   ├── chat/           # ChatModule — WebSocket gateway, streaming
 │       │   └── db/             # TypeORM entities, migrations, config
 │       └── package.json

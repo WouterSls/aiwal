@@ -9,9 +9,12 @@
 | Module | Purpose | Detail Spec |
 |--------|---------|-------------|
 | **CommonModule** | Shared infrastructure — guards, decorators, DTOs, interceptors, error handling | [`backend/common-module.md`](../backend/common-module.md) |
-| **AuthModule** | Dynamic SDK session validation, JWT issuance, global AuthGuard | [`backend/auth-module.md`](../backend/auth-module.md) |
-| **UsersModule** | User CRUD, preset management, wallet mapping, abstract repository pattern | [`backend/users-module.md`](../backend/users-module.md) |
-| **WalletModule** | Dynamic delegation webhook, AES-256 at-rest encryption, delegation material access for ExecutionModule | [`backend/wallet-module.md`](../backend/wallet-module.md) |
+| **AuthModule** | Dynamic JWKS token verification, global DynamicAuthGuard, user registration endpoint | [`backend/auth-module.md`](../backend/auth-module.md) |
+| **UsersModule** | User CRUD, preset management, abstract repository pattern | [`backend/users-module.md`](../backend/users-module.md) |
+| **WalletModule** | Dynamic delegation webhook, AES-256 at-rest encryption, delegation material access | [`backend/wallet-module.md`](../backend/wallet-module.md) |
+| **PriceFeedModule** | Uniswap Quoter API prices, Base block listener, limit order condition monitoring | [`backend/pricefeed-module.md`](../backend/pricefeed-module.md) |
+| **OrdersModule** | Proposal + order CRUD, market/conditional dispatch, EventEmitter2 execution handoff | [`backend/orders-module.md`](../backend/orders-module.md) |
+| **ExecutionModule** | Dynamic delegated wallet, Uniswap swap execution, order.execute event handler | [`backend/execution-module.md`](../backend/execution-module.md) |
 
 ---
 
@@ -23,15 +26,19 @@
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    EventEmitterModule.forRoot(),
     CommonModule,
     AuthModule,
     UsersModule,
-    // ... future modules
+    WalletModule,
+    PriceFeedModule,
+    OrdersModule,
+    ExecutionModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      useClass: DynamicAuthGuard,
     },
   ],
 })
@@ -46,18 +53,17 @@ export class AppModule {}
 Frontend                       Backend
    │                              │
    │── Dynamic SDK login ──►      │
-   │◄── session token ──────      │
+   │◄── authToken ───────────     │
    │                              │
-   │── POST /api/auth/session ──► │
-   │   { sessionToken }          │
-   │                              ├── DynamicService.validateSession()
-   │                              ├── UsersService.findOrCreate()
-   │                              ├── JwtService.sign(payload)
-   │◄── { accessToken, user } ── │
+   │── POST /api/auth/register ──►│  (@Public — first login only)
+   │   { preset }                 │
+   │   Authorization: Bearer      ├── DynamicService.verifyToken()
+   │   <Dynamic JWT>              ├── UsersService.create()
+   │◄── { user } ────────────────│
    │                              │
    │── GET /api/... ───────────► │
    │   Authorization: Bearer JWT  │
-   │                              ├── JwtAuthGuard → verify JWT
+   │                              ├── DynamicAuthGuard → JWKS verify → findByDynamicId
    │                              ├── Controller handles request
    │◄── response ─────────────── │
 ```
@@ -67,38 +73,28 @@ Frontend                       Backend
 ## Required Packages
 
 ```
-@nestjs/jwt
 @nestjs/config
+@nestjs/event-emitter
 class-validator
 class-transformer
+ethers
 ```
-
-No `@nestjs/passport` — unnecessary for single-strategy auth.
 
 ---
 
 ## Environment Variables
 
 ```
-JWT_SECRET=              # Random secret for signing JWTs
-JWT_EXPIRATION=4h        # Token TTL
-DYNAMIC_API_KEY=         # Dynamic SDK server-side API key
-DYNAMIC_ENVIRONMENT_ID=  # Dynamic environment ID
+DYNAMIC_ENVIRONMENT_ID=    # Dynamic environment ID
+DYNAMIC_JWKS_URI=          # Dynamic JWKS endpoint for token verification
+DYNAMIC_WEBHOOK_SECRET=    # HMAC-SHA256 webhook verification
+DYNAMIC_RSA_PRIVATE_KEY=   # RSA decryption of delegation materials
+DELEGATION_ENCRYPTION_KEY= # 32-byte key for AES-256-GCM at-rest encryption
+BASE_WSS_URL=              # WebSocket RPC endpoint for Base
+UNISWAP_API_URL=           # Uniswap API base URL
 ```
 
----
-
-## Remaining Modules to Design
-
-| # | Module | Status | Depends on |
-|---|--------|--------|------------|
-| 1 | **PriceFeedModule** | Not started | Chainlink CRE |
-| 2 | **OrdersModule** | Not started | UsersModule, PriceFeedModule, persistence layer |
-| 3 | **ExecutionModule** | Not started | WalletModule, Uniswap API, persistence layer |
-| 4 | **AgentModule** | Not started | WalletModule, OrdersModule, PriceFeedModule, Claude API |
-
-### Design order
 
 ```
-WalletModule → PriceFeedModule → OrdersModule → ExecutionModule → AgentModule → ChatModule
+WalletModule → PriceFeedModule → OrdersModule → ExecutionModule
 ```

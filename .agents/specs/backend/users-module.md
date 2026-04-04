@@ -22,8 +22,11 @@ export class User {
   dynamicWalletId?: string;     // Dynamic walletId from delegation webhook (null until first trade)
   delegatedShare?: string;      // AES-256 encrypted ServerKeyShare JSON (null until delegated)
   walletApiKey?: string;        // AES-256 encrypted wallet API key (null until delegated)
-  delegationActive: boolean;    // false until first trade delegation confirmed
   createdAt: Date;
+
+  isDelegated(): boolean {
+    return !!this.delegatedShare;
+  }
 }
 ```
 
@@ -148,7 +151,6 @@ export class UserResponseDto {
   id: string;
   walletAddress: string;
   preset: TradingPreset | null;
-  delegationActive: boolean;
   createdAt: Date;
 }
 ```

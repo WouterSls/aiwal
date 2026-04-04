@@ -76,7 +76,7 @@ export class WalletService {
 
   /**
    * Encrypts delegation materials with AES-256 and upserts them on the user row.
-   * Sets delegation_active = true, dynamic_wallet_id, delegated_share, wallet_api_key.
+   * Sets dynamic_wallet_id, delegated_share, wallet_api_key on the user row.
    * Always overwrites — last webhook wins.
    *
    * TODO: deduplicate by eventId to guard against Dynamic webhook retries.
