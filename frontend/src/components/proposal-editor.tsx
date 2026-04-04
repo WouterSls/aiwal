@@ -77,13 +77,13 @@ export function ProposalEditor({
       <div className="flex gap-2 border-t border-black p-4">
         <button
           onClick={onConfirm}
-          className="flex-1 border border-black bg-black py-2 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-black"
+          className="flex-1 border border-black bg-black py-2 text-sm font-medium uppercase tracking-widest text-white"
         >
           Confirm
         </button>
         <button
           onClick={onCancel}
-          className="flex-1 border border-black bg-white py-2 text-sm font-medium uppercase tracking-widest text-black transition-colors hover:bg-black hover:text-white"
+          className="flex-1 border border-black bg-white py-2 text-sm font-medium uppercase tracking-widest text-black transition-colors hover:bg-black/10"
         >
           Cancel
         </button>
