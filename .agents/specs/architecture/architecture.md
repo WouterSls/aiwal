@@ -69,11 +69,11 @@ Serves the user-facing UI: chat interface, portfolio view, and transaction confi
 
 ### Pages / Views
 
-| Route      | Description                                             |
-| ---------- | ------------------------------------------------------- |
-| `/`        | Landing / login via Dynamic                             |
-| `/onboard` | One-time agent preset selection (Institutional / Degen) |
-| `/chat`    | Main chat interface + portfolio sidebar                 |
+| Route        | Description                                             |
+| ------------ | ------------------------------------------------------- |
+| `/`          | Landing / login via Dynamic                             |
+| `/onboard`   | One-time agent preset selection (Institutional / Degen) |
+| `/dashboard` | Main chat interface + portfolio sidebar                 |
 
 ### Communication with Backend
 
@@ -85,6 +85,7 @@ Serves the user-facing UI: chat interface, portfolio view, and transaction confi
 ## 2. Backend — NestJS (Self-hosted VPS)
 
 ### Purpose
+
 Long-running process that handles AI reasoning, order management, Chainlink signal listening, and on-chain execution.
 
 ### Tech
@@ -192,6 +193,7 @@ pending → submitted → completed
 **Most likely approach:** CRE workflows that monitor price feeds and trigger callbacks when order conditions are met.
 
 **Possible patterns:**
+
 1. CRE pushes event/webhook to NestJS backend → backend executes order
 2. CRE triggers on-chain function directly → smart contract executes swap
 3. Backend polls CRE feeds on interval → checks order conditions locally
@@ -209,12 +211,14 @@ pending → submitted → completed
 Executes swaps on Base via the Uniswap API.
 
 **Capabilities:**
+
 - Route finding (optimal path across pools)
 - Slippage estimation
 - Gas estimation
 - Swap execution via the embedded wallet's delegated access
 
 **Flow:**
+
 1. Receive swap params (token_in, token_out, amount, slippage)
 2. Call Uniswap API for quote + route
 3. Build transaction
@@ -230,6 +234,7 @@ Executes swaps on Base via the Uniswap API.
 Dynamic uses MPC (multi-party computation) embedded wallets. Delegation lets the server sign transactions on behalf of the user without holding the full private key.
 
 **Packages:**
+
 - `@dynamic-labs-sdk/client` + `@dynamic-labs-sdk/client/waas` — client-side (Next.js)
 - `@dynamic-labs-wallet/node` — server-side decryption
 - `@dynamic-labs-wallet/node-evm` — server-side EVM signing
@@ -237,8 +242,11 @@ Dynamic uses MPC (multi-party computation) embedded wallets. Delegation lets the
 **Client-side (lazy trigger — first trade confirmation):**
 
 ```ts
-import { getWalletAccounts } from '@dynamic-labs-sdk/client';
-import { hasDelegatedAccess, delegateWaasKeyShares } from '@dynamic-labs-sdk/client/waas';
+import { getWalletAccounts } from "@dynamic-labs-sdk/client";
+import {
+  hasDelegatedAccess,
+  delegateWaasKeyShares,
+} from "@dynamic-labs-sdk/client/waas";
 
 const walletAccount = getWalletAccounts()[0];
 if (!hasDelegatedAccess({ walletAccount })) {
@@ -256,7 +264,7 @@ Called once — before the first `POST /api/orders/:id/confirm`. If delegation a
 4. Upsert into `delegations` table (keyed on `user_id`)
 
 ```ts
-import { decryptDelegatedWebhookData } from '@dynamic-labs-wallet/node';
+import { decryptDelegatedWebhookData } from "@dynamic-labs-wallet/node";
 
 const { decryptedDelegatedShare, decryptedWalletApiKey } =
   decryptDelegatedWebhookData({
@@ -269,7 +277,7 @@ const { decryptedDelegatedShare, decryptedWalletApiKey } =
 **Server-side signing (ExecutionModule):**
 
 ```ts
-import { createDelegatedEvmWalletClient } from '@dynamic-labs-wallet/node-evm';
+import { createDelegatedEvmWalletClient } from "@dynamic-labs-wallet/node-evm";
 
 const client = createDelegatedEvmWalletClient({
   environmentId: process.env.DYNAMIC_ENVIRONMENT_ID,
@@ -286,6 +294,7 @@ const signature = await client.signTransaction({
 ```
 
 **Security:**
+
 - Webhook endpoint has no JWT auth — uses HMAC-SHA256 verification only
 - Delegation materials encrypted at rest before DB storage
 - No plaintext key material ever stored
@@ -378,19 +387,19 @@ When a proposal is cancelled, all non-terminal orders are set to `cancelled`. Co
 
 ### NestJS Backend API
 
-| Method | Route                     | Description                              |
-| ------ | ------------------------- | ---------------------------------------- |
+| Method | Route                       | Description                                                                                |
+| ------ | --------------------------- | ------------------------------------------------------------------------------------------ |
 | GET    | `/api/users?walletAddress=` | Look up user by wallet address. 200 + user profile if found, 404 if not. No auth required. |
-| POST   | `/api/users`              | Create user with wallet address + preset in one shot. No auth required. |
-| POST   | `/api/chat`                  | Send message, get agent response. Requires JWT. |
-| GET    | `/api/portfolio`             | Wallet balances + token values           |
-| GET    | `/api/proposals`             | List user's proposals                    |
-| POST   | `/api/proposals`             | Create proposal + orders from confirmed strategy |
-| GET    | `/api/proposals/:id`         | Get single proposal                      |
-| GET    | `/api/proposals/:id/orders`  | List orders under a proposal             |
-| DELETE | `/api/proposals/:id`         | Cancel proposal and all active orders    |
-| GET    | `/api/prices`                | Current Chainlink price feeds            |
-| POST   | `/api/webhooks/dynamic`   | Receive Dynamic delegation webhook (no JWT — HMAC-SHA256 only) |
+| POST   | `/api/users`                 | Create user with wallet address + preset in one shot. No auth required.                    |
+| POST   | `/api/chat`                  | Send message, get agent response. Requires JWT.                                            |
+| GET    | `/api/portfolio`             | Wallet balances + token values                                                             |
+| GET    | `/api/proposals`             | List user's proposals                                                                      |
+| POST   | `/api/proposals`             | Create proposal + orders from confirmed strategy                                           |
+| GET    | `/api/proposals/:id`         | Get single proposal                                                                        |
+| GET    | `/api/proposals/:id/orders`  | List orders under a proposal                                                               |
+| DELETE | `/api/proposals/:id`         | Cancel proposal and all active orders                                                      |
+| GET    | `/api/prices`                | Current Chainlink price feeds                                                              |
+| POST   | `/api/webhooks/dynamic`      | Receive Dynamic delegation webhook (no JWT — HMAC-SHA256 only)                             |
 
 ---
 
@@ -427,17 +436,16 @@ JWT (for proposal submission):
 
 ```
 aiwal/
-├── apps/
-│   ├── web/                    # Next.js frontend
-│   │   ├── app/                # App Router pages
-│   │   │   ├── page.tsx        # Landing / login
-│   │   │   ├── onboard/        # Preset selection
-│   │   │   └── chat/           # Chat + portfolio
-│   │   ├── components/         # UI components
-│   │   ├── lib/                # Client utilities
-│   │   └── package.json
-│   │
-│   └── server/                 # NestJS backend
+├── frontend/
+│      ├── app/                # App Router pages
+│      │   ├── page.tsx        # Landing / login
+│      │   ├── onboard/        # Preset selection
+│      │   └── chat/           # Chat + portfolio
+│      ├── components/         # UI components
+│      ├── lib/                # Client utilities
+│      └── package.json
+│
+├── backend/
 │       ├── src/
 │       │   ├── main.ts         # NestJS bootstrap entry
 │       │   ├── app.module.ts   # Root module
@@ -467,13 +475,14 @@ aiwal/
 
 ## 7. Deployment
 
-| Component  | Platform        | Notes                                    |
-| ---------- | --------------- | ---------------------------------------- |
-| Frontend   | Vercel          | Auto-deploy from main branch             |
-| Backend    | Self-hosted VPS | PM2 or Docker, persistent process needed |
-| Database   | VPS (SQLite)    | Same host as backend for MVP             |
+| Component | Platform        | Notes                                    |
+| --------- | --------------- | ---------------------------------------- |
+| Frontend  | Vercel          | Auto-deploy from main branch             |
+| Backend   | Self-hosted VPS | PM2 or Docker, persistent process needed |
+| Database  | VPS (SQLite)    | Same host as backend for MVP             |
 
 **Environment variables (backend):**
+
 ```
 CLAUDE_API_KEY=
 DYNAMIC_API_KEY=
