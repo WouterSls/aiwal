@@ -86,19 +86,7 @@ DYNAMIC_API_KEY=         # Dynamic SDK server-side API key
 DYNAMIC_ENVIRONMENT_ID=  # Dynamic environment ID
 ```
 
----
-
-## Remaining Modules to Design
-
-| # | Module | Status | Depends on |
-|---|--------|--------|------------|
-| 1 | **PriceFeedModule** | Not started | Chainlink CRE |
-| 2 | **OrdersModule** | Not started | UsersModule, PriceFeedModule, persistence layer |
-| 3 | **ExecutionModule** | Not started | WalletModule, Uniswap API, persistence layer |
-| 4 | **AgentModule** | Not started | WalletModule, OrdersModule, PriceFeedModule, Claude API |
-
-### Design order
 
 ```
-WalletModule → PriceFeedModule → OrdersModule → ExecutionModule → AgentModule → ChatModule
+WalletModule → PriceFeedModule → OrdersModule → ExecutionModule
 ```

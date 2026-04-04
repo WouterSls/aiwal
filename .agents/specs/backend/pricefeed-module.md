@@ -158,7 +158,6 @@ export class BlockListenerService implements OnModuleInit, OnModuleDestroy {
     PriceFeedModule,
     // OrdersModule,
     // ExecutionModule,
-    // AgentModule,
   ],
 })
 export class AppModule {}
