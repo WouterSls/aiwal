@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getWalletAccounts } from "@dynamic-labs-sdk/client";
 import { dynamicClient } from "@/lib/dynamic";
@@ -56,11 +56,11 @@ export default function DashboardPage() {
     useState<TransactionProposal | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const [mounted, setMounted] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
 
-  const accounts = getWalletAccounts(dynamicClient);
-  if (!accounts.length) return null;
+  useEffect(() => setMounted(true), []);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -145,6 +145,11 @@ export default function DashboardPage() {
   function handleCancelProposal() {
     setActiveProposal(null);
   }
+
+  if (!mounted) return null;
+
+  const accounts = getWalletAccounts(dynamicClient);
+  if (!accounts.length) return null;
 
   return (
     <>

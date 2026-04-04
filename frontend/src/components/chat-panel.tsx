@@ -22,11 +22,12 @@ export function ChatPanel({
   onSend,
   loading,
 }: ChatPanelProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!messages.length && !streamingContent) return;
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages, streamingContent]);
 
   return (
@@ -36,7 +37,7 @@ export function ChatPanel({
           Agent
         </h2>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 && !streamingContent && (
           <div className="flex h-full items-center justify-center text-sm text-black/30 uppercase tracking-widest">
             Start a conversation
@@ -52,7 +53,7 @@ export function ChatPanel({
             streaming
           />
         )}
-        <div ref={bottomRef} />
+        <div />
       </div>
       <ChatInput onSend={onSend} disabled={loading} />
     </div>
