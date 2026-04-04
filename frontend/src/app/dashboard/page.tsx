@@ -168,7 +168,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="flex h-[calc(100vh-65px)] overflow-hidden border-b border-black pt-2">
+      <div className="flex h-[calc(100vh-65px)] overflow-hidden border-b border-black pt-4">
         <div className="w-1/2 overflow-hidden border-r border-black">
           {activeProposal ? (
             <ProposalEditor
