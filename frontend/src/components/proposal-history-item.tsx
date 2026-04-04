@@ -1,17 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-
-interface Proposal {
-  id: string;
-  title: string;
-  reasoning: string;
-  token_in: string;
-  token_out: string;
-  status: "accepted" | "declined" | "cancelled";
-  created_at: string;
-}
 
 interface Order {
   id: string;
@@ -22,15 +11,21 @@ interface Order {
   slippage_tolerance?: string;
   trading_price_usd?: number;
   confirmation_hash?: string;
-  status: "pending" | "submitted" | "completed" | "failed" | "cancelled";
+  status: string;
   created_at: string;
 }
 
-async function fetchOrders(proposalId: string): Promise<Order[]> {
-  const res = await fetch(`/api/proposals/${proposalId}/orders`);
-  if (!res.ok) throw new Error("Failed to fetch orders");
-  const { orders } = await res.json();
-  return orders ?? [];
+interface Proposal {
+  id: string;
+  wallet_address: string;
+  title: string;
+  reasoning: string;
+  token_in: string;
+  token_out: string;
+  status: string;
+  created_at: string | null;
+  updated_at: string | null;
+  orders: Order[];
 }
 
 function orderDescription(
@@ -103,12 +98,6 @@ function OrderRow({
 export function ProposalHistoryItem({ proposal }: { proposal: Proposal }) {
   const [expanded, setExpanded] = useState(false);
 
-  const { data: orders } = useQuery({
-    queryKey: ["orders", proposal.id],
-    queryFn: () => fetchOrders(proposal.id),
-    enabled: expanded,
-  });
-
   return (
     <div className="border-b border-black">
       <button
@@ -133,7 +122,9 @@ export function ProposalHistoryItem({ proposal }: { proposal: Proposal }) {
             {proposal.status}
           </span>
           <span className="text-xs text-black/30">
-            {new Date(proposal.created_at).toLocaleString()}
+            {proposal.created_at
+              ? new Date(proposal.created_at).toLocaleString()
+              : "—"}
           </span>
           <span className="text-xs text-black/30">
             {expanded ? "▲" : "▼"}
@@ -143,18 +134,14 @@ export function ProposalHistoryItem({ proposal }: { proposal: Proposal }) {
 
       {expanded && (
         <div className="pb-4">
-          {!orders ? (
-            <p className="text-xs uppercase tracking-widest text-black/30 py-2">
-              Loading...
-            </p>
-          ) : orders.length === 0 ? (
+          {proposal.orders.length === 0 ? (
             <p className="text-xs uppercase tracking-widest text-black/30 py-2">
               No orders
             </p>
           ) : (
             <table className="w-full">
               <tbody>
-                {orders.map((order) => (
+                {proposal.orders.map((order) => (
                   <OrderRow
                     key={order.id}
                     order={order}

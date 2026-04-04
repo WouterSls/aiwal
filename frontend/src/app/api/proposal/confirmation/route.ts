@@ -1,26 +1,6 @@
-let pendingResolve: (() => void) | null = null;
-
-function awaitConfirmation(timeoutMs: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      pendingResolve = null;
-      resolve(false);
-    }, timeoutMs);
-
-    pendingResolve = () => {
-      clearTimeout(timer);
-      pendingResolve = null;
-      resolve(true);
-    };
-  });
-}
-
-export async function GET() {
-  const confirmed = await awaitConfirmation(15_000);
-  return new Response(null, { status: confirmed ? 200 : 408 });
-}
-
-export async function POST() {
-  pendingResolve?.();
+export async function POST(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const walletAddress = searchParams.get("wallet_address");
+  if (!walletAddress) return new Response(null, { status: 400 });
   return new Response(null, { status: 201 });
 }

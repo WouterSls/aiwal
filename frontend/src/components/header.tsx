@@ -84,6 +84,7 @@ export function Header() {
     try {
       await logout(dynamicClient);
     } catch {
+      setAddress(null);
       setDisconnecting(false);
     }
   }

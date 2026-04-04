@@ -1,21 +1,41 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { getWalletAccounts } from "@dynamic-labs-sdk/client";
 import { dynamicClient } from "@/lib/dynamic";
 import { ProposalHistoryItem } from "@/components/proposal-history-item";
 
+interface Order {
+  id: string;
+  type: "swap" | "limit_order" | "send";
+  amount_in: string;
+  expected_out?: string;
+  to?: string;
+  slippage_tolerance?: string;
+  trading_price_usd?: number;
+  confirmation_hash?: string;
+  status: string;
+  created_at: string;
+}
+
 interface Proposal {
   id: string;
+  wallet_address: string;
   title: string;
   reasoning: string;
   token_in: string;
   token_out: string;
-  status: "accepted" | "declined" | "cancelled";
-  created_at: string;
+  status: string;
+  created_at: string | null;
+  updated_at: string | null;
+  orders: Order[];
 }
 
 async function fetchProposals(): Promise<Proposal[]> {
-  const res = await fetch("/api/proposals", {
+  const walletAddress = getWalletAccounts(dynamicClient)[0]?.address;
+  const url = new URL("/api/proposals", window.location.origin);
+  if (walletAddress) url.searchParams.set("walletAddress", walletAddress);
+  const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${dynamicClient.token}` },
   });
   if (!res.ok) throw new Error("Failed to fetch proposals");

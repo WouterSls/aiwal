@@ -188,9 +188,6 @@ export default function DashboardPage() {
     setConfirmPending(true);
     try {
       const token = dynamicClient.token;
-      const confirmationPoll = fetch("/api/proposal/confirmation", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
       await Promise.all([
         delegate(),
         fetch("/api/proposal", {
@@ -199,18 +196,15 @@ export default function DashboardPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(activeProposal),
+          body: JSON.stringify({
+            ...activeProposal,
+            wallet_address: getWalletAccounts(dynamicClient)[0]?.address,
+          }),
         }),
       ]);
-      const confirmRes = await confirmationPoll;
-      if (!confirmRes.ok) throw new Error("Task timeout");
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
     } catch (error: unknown) {
-      let errorMessage = error instanceof Error ? error.message : "Unknown";
-      if (errorMessage.includes("Task timed out")) {
-        errorMessage = "Timed out waiting for response from server";
-      }
-
+      const errorMessage = error instanceof Error ? error.message : "Unknown";
       toast.error("Error Submitting Propsal", { description: errorMessage });
     } finally {
       setConfirmPending(false);
