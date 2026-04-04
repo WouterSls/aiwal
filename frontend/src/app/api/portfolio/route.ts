@@ -14,14 +14,14 @@ interface TokenList {
   tokens: TokenListEntry[];
 }
 
-function loadTokenMap(): Map<string, TokenListEntry> {
+const tokenMap: Map<string, TokenListEntry> = (() => {
   const raw = fs.readFileSync(
     path.join(process.cwd(), "../resources/8453-tokens.json"),
     "utf-8"
   );
   const list: TokenList = JSON.parse(raw);
   return new Map(list.tokens.map((t) => [t.address.toLowerCase(), t]));
-}
+})();
 
 async function rpcCall(method: string, params: unknown[]) {
   const res = await fetch(ALCHEMY_URL, {
@@ -47,8 +47,6 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address");
   if (!address) return Response.json({ error: "address required" }, { status: 400 });
-
-  const tokenMap = loadTokenMap();
 
   const [ethHex, erc20Result] = await Promise.all([
     rpcCall("eth_getBalance", [address, "latest"]),
