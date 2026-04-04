@@ -94,11 +94,11 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get('me')
-  async getMe(@CurrentUser('sub') userId: string): Promise<UserResponseDto>;
+  async getMe(@CurrentUser('id') userId: string): Promise<UserResponseDto>;
 
   @Patch('me/preset')
   async updatePreset(
-    @CurrentUser('sub') userId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: UpdatePresetDto,
   ): Promise<UserResponseDto>;
 }
