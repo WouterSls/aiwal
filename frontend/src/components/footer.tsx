@@ -1,6 +1,6 @@
 export function Footer() {
   return (
-    <footer className="border-t border-black py-10">
+    <footer className="border-t border-black pt-16 pb-10">
       <div className="mx-auto w-full max-w-6xl px-6 md:px-10">
         {/** OUR MISSION | LEGAL */}
         <div className="grid grid-cols-2 gap-x-10 gap-y-14">
@@ -20,7 +20,7 @@ export function Footer() {
           </div>
         </div>
         {/** LEGAL LINKS */}
-        <div className="mt-20 text-center">
+        <div className="mt-32 text-center">
           <div className="grid grid-cols-5 max-w-lg mx-auto text-sm">
             <a href="https://github.com/aiwal">GitHub</a>
             <span>·</span>
