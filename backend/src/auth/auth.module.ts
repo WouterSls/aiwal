@@ -6,6 +6,6 @@ import { DynamicAuthGuard } from './guards/dynamic-auth.guard';
 @Module({
   imports: [UsersModule],
   providers: [DynamicService, DynamicAuthGuard],
-  exports: [DynamicAuthGuard],
+  exports: [DynamicService, DynamicAuthGuard],
 })
 export class AuthModule {}

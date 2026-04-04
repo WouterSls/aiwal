@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { DynamicAuthGuard } from './auth/guards/dynamic-auth.guard';
 import { OrdersModule } from './orders/orders.module';
 import { WalletModule } from './wallet/wallet.module';
+import { ExecutionModule } from './execution/execution.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { WalletModule } from './wallet/wallet.module';
     UsersModule,
     WalletModule,
     OrdersModule,
+    ExecutionModule,
   ],
   providers: [
     {
