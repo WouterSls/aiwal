@@ -29,12 +29,9 @@
 | [header.md](frontend/header.md)                                             | NOT DONE | Header — persistent site header across all routes                                                                   |
 | [connect-button.md](frontend/connect-button.md)                             | NOT DONE | Connect button — Dynamic JS SDK auth, email OTP + social login via custom modal                                     |
 | [dashboard.md](frontend/dashboard.md)                                       | NOT DONE | Dashboard — `/dashboard` route, 50/50 chat+portfolio layout, proposal editor, proposals history                     |
-
-## Dynamic Wallet Integration
-
-| Spec                                          | Status   | Description                             |
-| --------------------------------------------- | -------- | --------------------------------------- |
-| [INFO.md](dynamic-wallet-integration/INFO.md) | NOT DONE | Dynamic SDK embedded wallet integration |
+| [onboard-page.md](frontend/onboard-page.md)                                 | NOT DONE | Onboard page — `/onboard` route, one-time preset selection for new users                                            |
+| [footer.md](frontend/footer.md)                                             | NOT DONE | Footer — landing page only, multi-column editorial footer                                                           |
+| [legal-pages.md](frontend/legal-pages.md)                                   | NOT DONE | Legal pages — `/privacy` and `/terms` routes                                                                        |
 
 ## LLM Context Integration
 
