@@ -68,7 +68,7 @@ export default function LandingPage() {
             AIWAL
           </h1>
           <p className="text-xl font-light lowercase tracking-widest">
-            The next generation of wallets
+            The next generation wallet
           </p>
           <ConnectButton />
         </div>
