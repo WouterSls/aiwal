@@ -1,4 +1,4 @@
-import { UserEntity, TradingPreset } from './user.entity';
+import { UserEntity, TradingPreset } from './user.entity.js';
 
 export abstract class UserRepository {
   abstract findById(id: string): Promise<UserEntity | null>;

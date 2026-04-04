@@ -1,5 +1,5 @@
 import { IsString, IsIn, IsNotEmpty } from 'class-validator';
-import { TradingPreset } from '../user.entity';
+import { TradingPreset } from '../user.entity.js';
 
 export class CreateUserDto {
   @IsString()

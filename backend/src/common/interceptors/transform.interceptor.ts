@@ -5,7 +5,7 @@ import {
   CallHandler,
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
-import { ApiResponse } from '../dto/api-response.dto';
+import { ApiResponse } from '../dto/api-response.dto.js';
 
 @Injectable()
 export class TransformInterceptor<T>

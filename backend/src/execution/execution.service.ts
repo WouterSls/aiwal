@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { DelegatedEvmWalletClient, DelegatedSignTransactionParams, ServerKeyShare } from '@dynamic-labs-wallet/node-evm';
 import { JsonRpcProvider } from 'ethers';
-import { WalletService } from '../wallet/wallet.service';
+import { WalletService } from '../wallet/wallet.service.js';
 import { createDelegatedEvmWalletClient, delegatedSignTransaction } from '@dynamic-labs-wallet/node-evm'
 
 interface OrderExecutePayload {

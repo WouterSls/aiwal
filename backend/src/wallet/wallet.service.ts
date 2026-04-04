@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
-import { UsersService } from '../users/users.service';
+import { UsersService } from '../users/users.service.js';
 
 @Injectable()
 export class WalletService {

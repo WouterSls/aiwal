@@ -10,13 +10,13 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { UserEntity } from '../users/user.entity';
-import { OrderResponseDto } from './dto/order-response.dto';
-import { CreateProposalDto } from './dto/create-proposal.dto';
-import { ProposalResponseDto } from './dto/proposal-response.dto';
-import { OrdersService } from './orders.service';
-import { ProposalsService } from './proposals.service';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import { UserEntity } from '../users/user.entity.js';
+import { OrderResponseDto } from './dto/order-response.dto.js';
+import { CreateProposalDto } from './dto/create-proposal.dto.js';
+import { ProposalResponseDto } from './dto/proposal-response.dto.js';
+import { OrdersService } from './orders.service.js';
+import { ProposalsService } from './proposals.service.js';
 
 @Controller('api/proposals')
 export class ProposalsController {

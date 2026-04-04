@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PriceFeedService } from '../price-feed/price-feed.service';
-import { Order, OrderStatus, OrderType } from './order';
-import { CreateOrderData, OrderRepository } from './order.repository';
-import { Proposal, ProposalStatus } from './proposal';
-import { ProposalsService } from './proposals.service';
+import { PriceFeedService } from '../price-feed/price-feed.service.js';
+import { Order, OrderStatus, OrderType } from './order.js';
+import { CreateOrderData, OrderRepository } from './order.repository.js';
+import { Proposal, ProposalStatus } from './proposal.js';
+import { ProposalsService } from './proposals.service.js';
 
 interface OrderExecutePayload {
   orderId: string;

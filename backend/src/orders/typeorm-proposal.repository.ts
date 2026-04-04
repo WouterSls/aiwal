@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ProposalEntity } from '../persistence/proposal.entity';
-import { Proposal, ProposalStatus } from './proposal';
-import { CreateProposalData, ProposalRepository } from './proposal.repository';
+import { ProposalEntity } from '../persistence/proposal.entity.js';
+import { Proposal, ProposalStatus } from './proposal.js';
+import { CreateProposalData, ProposalRepository } from './proposal.repository.js';
 
 @Injectable()
 export class TypeOrmProposalRepository extends ProposalRepository {

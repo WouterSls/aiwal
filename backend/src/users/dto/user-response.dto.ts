@@ -1,4 +1,4 @@
-import { TradingPreset } from '../user.entity';
+import { TradingPreset } from '../user.entity.js';
 
 export class UserResponseDto {
   id: string;

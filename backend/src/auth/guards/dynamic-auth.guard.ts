@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator';
-import { DynamicService } from '../services/dynamic.service';
-import { UsersService } from '../../users/users.service';
+import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator.js';
+import { DynamicService } from '../services/dynamic.service.js';
+import { UsersService } from '../../users/users.service.js';
 
 @Injectable()
 export class DynamicAuthGuard implements CanActivate {

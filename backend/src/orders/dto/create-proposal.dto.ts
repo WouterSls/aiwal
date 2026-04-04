@@ -9,7 +9,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { OrderType } from '../order';
+import { OrderType } from '../order.js';
 
 export class CreateOrderDto {
   @IsEnum(OrderType)

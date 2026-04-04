@@ -1,9 +1,9 @@
 import { BadRequestException, Body, Controller, Headers, HttpCode, Post } from '@nestjs/common';
-import { Public } from '../common/decorators/public.decorator';
-import { RawBody } from '../common/decorators/raw-body.decorator';
-import { DelegationWebhookPayload } from './dto/delegation-webhook.dto';
-import { WalletService } from './wallet.service';
-import { WebhookService } from './services/webhook.service';
+import { Public } from '../common/decorators/public.decorator.js';
+import { RawBody } from '../common/decorators/raw-body.decorator.js';
+import { DelegationWebhookPayload } from './dto/delegation-webhook.dto.js';
+import { WalletService } from './wallet.service.js';
+import { WebhookService } from './services/webhook.service.js';
 
 @Public()
 @Controller('api/webhooks')

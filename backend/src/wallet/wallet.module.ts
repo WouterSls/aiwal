@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { UsersModule } from '../users/users.module';
-import { WalletController } from './wallet.controller';
-import { WalletService } from './wallet.service';
-import { WebhookService } from './services/webhook.service';
+import { UsersModule } from '../users/users.module.js';
+import { WalletController } from './wallet.controller.js';
+import { WalletService } from './wallet.service.js';
+import { WebhookService } from './services/webhook.service.js';
 
 @Module({
   imports: [UsersModule],

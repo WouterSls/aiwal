@@ -8,13 +8,13 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Public } from '../common/decorators/public.decorator';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdatePresetDto } from './dto/update-preset.dto';
-import { UserResponseDto } from './dto/user-response.dto';
-import { UserEntity } from './user.entity';
+import { UsersService } from './users.service.js';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import { Public } from '../common/decorators/public.decorator.js';
+import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdatePresetDto } from './dto/update-preset.dto.js';
+import { UserResponseDto } from './dto/user-response.dto.js';
+import { UserEntity } from './user.entity.js';
 
 @Controller('api/users')
 export class UsersController {

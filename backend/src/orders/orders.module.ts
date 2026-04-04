@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { OrderEntity } from '../persistence/order.entity';
-import { ProposalEntity } from '../persistence/proposal.entity';
-import { PriceFeedModule } from '../price-feed/price-feed.module';
-import { OrderRepository } from './order.repository';
-import { OrdersService } from './orders.service';
-import { ProposalRepository } from './proposal.repository';
-import { ProposalsController } from './proposals.controller';
-import { ProposalsService } from './proposals.service';
-import { TypeOrmOrderRepository } from './typeorm-order.repository';
-import { TypeOrmProposalRepository } from './typeorm-proposal.repository';
+import { OrderEntity } from '../persistence/order.entity.js';
+import { ProposalEntity } from '../persistence/proposal.entity.js';
+import { PriceFeedModule } from '../price-feed/price-feed.module.js';
+import { OrderRepository } from './order.repository.js';
+import { OrdersService } from './orders.service.js';
+import { ProposalRepository } from './proposal.repository.js';
+import { ProposalsController } from './proposals.controller.js';
+import { ProposalsService } from './proposals.service.js';
+import { TypeOrmOrderRepository } from './typeorm-order.repository.js';
+import { TypeOrmProposalRepository } from './typeorm-proposal.repository.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ProposalEntity, OrderEntity]), PriceFeedModule],

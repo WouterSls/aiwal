@@ -7,7 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { ProposalEntity } from './proposal.entity';
+import { ProposalEntity } from './proposal.entity.js';
 
 @Entity('orders')
 export class OrderEntity {

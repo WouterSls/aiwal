@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserEntity, TradingPreset } from './user.entity';
-import { UserRepository } from './user.repository';
+import { UserEntity, TradingPreset } from './user.entity.js';
+import { UserRepository } from './user.repository.js';
 
 @Injectable()
 export class UsersService {

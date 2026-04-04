@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Proposal, ProposalStatus } from './proposal';
-import { CreateProposalData, ProposalRepository } from './proposal.repository';
+import { Proposal, ProposalStatus } from './proposal.js';
+import { CreateProposalData, ProposalRepository } from './proposal.repository.js';
 
 @Injectable()
 export class ProposalsService {

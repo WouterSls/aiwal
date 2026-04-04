@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { UsersModule } from '../users/users.module';
-import { DynamicService } from './services/dynamic.service';
-import { DynamicAuthGuard } from './guards/dynamic-auth.guard';
+import { UsersModule } from '../users/users.module.js';
+import { DynamicService } from './services/dynamic.service.js';
+import { DynamicAuthGuard } from './guards/dynamic-auth.guard.js';
 
 @Module({
   imports: [UsersModule],

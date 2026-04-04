@@ -1,4 +1,4 @@
-import { Order, OrderStatus, OrderType } from './order';
+import { Order, OrderStatus, OrderType } from './order.js';
 
 export interface CreateOrderData {
   type: OrderType;

@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { OrderEntity } from '../persistence/order.entity';
-import { Order, OrderStatus, OrderType } from './order';
-import { CreateOrderData, OrderRepository } from './order.repository';
+import { OrderEntity } from '../persistence/order.entity.js';
+import { Order, OrderStatus, OrderType } from './order.js';
+import { CreateOrderData, OrderRepository } from './order.repository.js';
 
 @Injectable()
 export class TypeOrmOrderRepository extends OrderRepository {

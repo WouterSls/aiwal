@@ -1,4 +1,4 @@
-import { Proposal, ProposalStatus } from './proposal';
+import { Proposal, ProposalStatus } from './proposal.js';
 
 export interface CreateProposalData {
   userId: string;

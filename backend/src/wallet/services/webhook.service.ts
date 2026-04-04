@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { constants, createHmac, privateDecrypt, timingSafeEqual } from 'crypto';
-import { DelegationWebhookData } from '../dto/delegation-webhook.dto';
+import { DelegationWebhookData } from '../dto/delegation-webhook.dto.js';
 
 @Injectable()
 export class WebhookService {
