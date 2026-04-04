@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { getWalletAccounts, onEvent } from "@dynamic-labs-sdk/client";
 import { dynamicClient } from "@/lib/dynamic";
-import { API_URL } from "@/lib/api";
 import { parseAgentResponse, TransactionProposal } from "@/lib/claude";
 import { PortfolioView } from "@/components/portfolio-view";
 import { ProposalEditor } from "@/components/proposal-editor";
@@ -58,6 +57,7 @@ export default function DashboardPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const [mounted, setMounted] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -71,6 +71,22 @@ export default function DashboardPage() {
       router.push("/");
     }
   }, [mounted, accounts.length, router]);
+
+  useEffect(() => {
+    if (!mounted || !accounts.length) return;
+
+    async function checkUserProfile() {
+      const address = accounts[0].address;
+      const res = await fetch(`/api/users?walletAddress=${address}`);
+      if (!res.ok) {
+        router.replace("/onboard");
+      } else {
+        setAuthorized(true);
+      }
+    }
+
+    checkUserProfile();
+  }, [mounted, accounts, router]);
 
   useEffect(() => {
     const offLogout = onEvent(
@@ -148,7 +164,7 @@ export default function DashboardPage() {
   async function handleConfirm() {
     if (!activeProposal) return;
     try {
-      await fetch(`${API_URL}/api/orders`, {
+      await fetch(`/api/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(activeProposal),
@@ -164,7 +180,7 @@ export default function DashboardPage() {
     setActiveProposal(null);
   }
 
-  if (!mounted || !accounts.length) return null;
+  if (!mounted || !accounts.length || !authorized) return null;
 
   return (
     <>
