@@ -180,9 +180,9 @@ export class OrdersService implements OnModuleInit {
   async findById(id: string): Promise<Order>;
   async findByProposalId(proposalId: string): Promise<Order[]>;
 
-  async createForProposal(proposal: Proposal, orders: CreateOrderData[]): Promise<Order[]>;
+  async createForProposal(proposal: Proposal, orders: CreateOrderData[], walletAddress: string): Promise<Order[]>;
   // Creates all orders with status 'pending'.
-  // send/swap orders: immediately emit 'order.execute'.
+  // send/swap orders: immediately emit 'order.execute' with walletAddress included.
   // limit_order: registers with PriceFeedService.watchOrder(orderId, tokenIn, tokenOut, tradingPriceUsd).
 
   async cancelProposal(proposalId: string): Promise<void>;
@@ -208,6 +208,7 @@ interface OrderExecutePayload {
   orderId: string;
   proposalId: string;
   userId: string;
+  walletAddress: string;   // sourced from req.user.walletAddress; needed by ExecutionModule as Uniswap swapper
   tokenIn: string;
   tokenOut: string;
   amountIn: string;
@@ -263,9 +264,10 @@ export class ProposalsController {
 
   @Post()
   async create(
-    @CurrentUser('id') userId: string,
+    @CurrentUser() user: User,
     @Body() dto: CreateProposalDto,
   ): Promise<ProposalResponseDto>;
+  // throws ConflictException { code: 'DELEGATION_REQUIRED' } if !user.isDelegated()
 
   @Get()
   async findAll(@CurrentUser('id') userId: string): Promise<ProposalResponseDto[]>;
@@ -387,8 +389,7 @@ export class OrderResponseDto {
     WalletModule,
     PriceFeedModule,
     OrdersModule,
-    // ExecutionModule,
-    // AgentModule,
+    ExecutionModule,
   ],
 })
 export class AppModule {}

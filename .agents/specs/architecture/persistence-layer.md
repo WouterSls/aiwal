@@ -77,7 +77,6 @@ users (
   dynamic_wallet_id TEXT,             -- Dynamic walletId from delegation webhook (null until first trade)
   delegated_share   TEXT,             -- AES-256 encrypted ServerKeyShare JSON (null until delegated)
   wallet_api_key    TEXT,             -- AES-256 encrypted wallet API key (null until delegated)
-  delegation_active BOOLEAN NOT NULL DEFAULT FALSE,
   created_at        TIMESTAMP DEFAULT NOW()
 )
 
