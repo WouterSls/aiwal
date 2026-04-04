@@ -32,7 +32,9 @@ export default function OnboardPage() {
 
     async function checkExistingUser() {
       const address = accounts[0].address;
-      const res = await fetch(`/api/users?walletAddress=${address}`);
+      const res = await fetch(`/api/users?walletAddress=${address}`, {
+        headers: { Authorization: `Bearer ${dynamicClient.token}` },
+      });
       if (res.status === 404) {
         setWalletAddress(address);
         return;
@@ -57,7 +59,10 @@ export default function OnboardPage() {
 
     await fetch(`/api/users`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${dynamicClient.token}`,
+      },
       body: JSON.stringify({ walletAddress, preset: selectedPreset }),
     });
 

@@ -55,8 +55,8 @@ export function ConfirmationModal({
                 <span className="uppercase tracking-widest">
                   {t.amount_in} {strategy.token_in} → {strategy.token_out}
                 </span>
-                {t.tradingPriceUsd && (
-                  <span className="text-black/50">@ ${t.tradingPriceUsd}</span>
+                {t.trading_price_usd && (
+                  <span className="text-black/50">@ ${t.trading_price_usd}</span>
                 )}
               </div>
             ))}

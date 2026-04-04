@@ -114,7 +114,7 @@ function tradeHeader(trade: Trade, tokenIn: string, tokenOut: string): string {
     return `send: ${amount} ${tokenIn} to: ${trade.to || "—"}`;
   }
   if (trade.type === "limit_order") {
-    return `limit order: ${tokenIn} → ${tokenOut} @ $${trade.tradingPriceUsd ?? "—"}`;
+    return `limit order: ${tokenIn} → ${tokenOut} @ $${trade.trading_price_usd ?? "—"}`;
   }
   return `swap: ${tokenIn} → ${tokenOut} @ market`;
 }
@@ -157,7 +157,7 @@ function TradeRow({
                 amount_in: "",
                 expected_out: null,
                 slippage_tolerance: null,
-                tradingPriceUsd: null,
+                trading_price_usd: null,
                 to: null,
               })
             }
@@ -233,10 +233,10 @@ function TradeRow({
             <>
               <Field label="Price (USD)">
                 <input
-                  value={trade.tradingPriceUsd ?? ""}
+                  value={trade.trading_price_usd ?? ""}
                   onChange={(e) =>
                     onChange({
-                      tradingPriceUsd: e.target.value
+                      trading_price_usd: e.target.value
                         ? Number(e.target.value)
                         : null,
                     })

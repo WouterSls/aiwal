@@ -22,7 +22,9 @@ export function PortfolioView() {
   const { data: portfolio } = useQuery<PortfolioToken[]>({
     queryKey: ["portfolio", address],
     queryFn: async () => {
-      const res = await fetch(`/api/portfolio?address=${address}`);
+      const res = await fetch(`/api/portfolio?address=${address}`, {
+        headers: { Authorization: `Bearer ${dynamicClient.token}` },
+      });
       return res.json();
     },
     enabled: !!address,
@@ -32,7 +34,9 @@ export function PortfolioView() {
   const { data: prices } = useQuery<PriceData>({
     queryKey: ["prices"],
     queryFn: async () => {
-      const res = await fetch("/api/prices");
+      const res = await fetch("/api/prices", {
+        headers: { Authorization: `Bearer ${dynamicClient.token}` },
+      });
       return res.json();
     },
     refetchInterval: 30_000,

@@ -33,6 +33,8 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const accounts = getWalletAccounts(dynamicClient);
+  const address = accounts[0]?.address;
+  const checkedRef = useRef(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -43,12 +45,14 @@ export default function DashboardPage() {
   }, [mounted, accounts.length, router]);
 
   useEffect(() => {
-    if (!mounted || !accounts.length) return;
+    if (!mounted || !address || checkedRef.current) return;
+    checkedRef.current = true;
 
     async function checkUserProfile() {
-      const address = accounts[0].address;
       try {
-        const res = await fetch(`/api/users?walletAddress=${address}`);
+        const res = await fetch(`/api/users?walletAddress=${address}`, {
+          headers: { Authorization: `Bearer ${dynamicClient.token}` },
+        });
         if (res.status === 404) {
           router.replace("/onboard");
           return;
@@ -69,7 +73,7 @@ export default function DashboardPage() {
     }
 
     checkUserProfile();
-  }, [mounted, accounts, router]);
+  }, [mounted, address, router]);
 
   useEffect(() => {
     const offLogout = onEvent(
@@ -80,9 +84,7 @@ export default function DashboardPage() {
   }, [router]);
 
   function buildCurrentSystemPrompt(): string | null {
-    if (!preset || !accounts[0]) return null;
-
-    const address = accounts[0].address;
+    if (!preset || !address) return null;
     const portfolio =
       queryClient.getQueryData<{ symbol: string; balance: string }[]>([
         "portfolio",
@@ -124,7 +126,10 @@ export default function DashboardPage() {
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${dynamicClient.token}`,
+          },
           body: JSON.stringify({
             system,
             messages: nextMessages.map((m) => ({
@@ -174,7 +179,7 @@ export default function DashboardPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loading, messages, preset, accounts],
+    [loading, messages, preset, address],
   );
 
   async function handleConfirm() {
@@ -182,18 +187,24 @@ export default function DashboardPage() {
 
     setConfirmPending(true);
     try {
-      const confirmationPoll = fetch("/api/proposal/confirmation");
+      const token = dynamicClient.token;
+      const confirmationPoll = fetch("/api/proposal/confirmation", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       await Promise.all([
         delegate(),
         fetch("/api/proposal", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify(activeProposal),
         }),
       ]);
       const confirmRes = await confirmationPoll;
       if (!confirmRes.ok) throw new Error("Task timeout");
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
     } catch (error: unknown) {
       let errorMessage = error instanceof Error ? error.message : "Unknown";
       if (errorMessage.includes("Task timed out")) {

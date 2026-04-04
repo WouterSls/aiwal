@@ -41,13 +41,13 @@ When the user wants to execute a trade or set up a strategy, wrap your proposal 
       "amount_in": "<amount as string>",
       "expected_out": "<amount as string>",
       "slippage_tolerance": "<percentage as string>",
-      "tradingPriceUsd": <price in USD as number, or null for market swaps>
+      "trading_price_usd": <price in USD as number, or null for market swaps>
     }
   ]
 }
 \`\`\`
 
-For a simple swap, trades contains exactly one entry with type "swap" and tradingPriceUsd null.
+For a simple swap, trades contains exactly one entry with type "swap" and trading_price_usd null.
 For an exit strategy, trades contains multiple limit orders at different price targets.
 You may include conversational text before or after the JSON block.
 

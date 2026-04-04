@@ -4,7 +4,7 @@ export interface Trade {
   amount_in: string;
   expected_out: string | null;
   slippage_tolerance: string | null;
-  tradingPriceUsd: number | null;
+  trading_price_usd: number | null;
   to: string | null;
 }
 
