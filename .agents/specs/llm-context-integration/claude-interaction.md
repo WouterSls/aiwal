@@ -1,34 +1,40 @@
 # Claude LLM Interaction — Spec
 
-> JTBD: LLM Context Integration · Status: NOT DONE
+> JTBD: LLM Context Integration · Status: DONE
 
 ---
 
 ## Overview
 
-Defines how the frontend communicates with the Claude API to power the Aiwal trading agent. Claude is called **directly from the frontend** — no backend proxy for chat. The backend only receives confirmed proposals for execution.
+Defines how the frontend communicates with the Claude API to power the Aiwal trading agent. Claude is called via a **Next.js API route proxy** (`/api/chat`) — never directly from the browser. The backend only receives confirmed proposals for execution.
 
 ## Flow
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    Frontend                          │
-│                                                      │
-│  1. User types message                               │
-│  2. Frontend assembles context bundle                │
-│  3. Frontend calls Claude API (streaming)            │
-│  4. Claude responds (text + optional proposal JSON)  │
-│  5. Frontend renders response in chat                │
-│  6. If proposal → show confirmation modal            │
-│  7. User confirms → POST /api/orders to backend      │
-│                                                      │
-└──────────────────────────┬──────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                      Frontend                            │
+│                                                          │
+│  1. User types message                                   │
+│  2. Frontend assembles system prompt from React Query    │
+│     cache (portfolio, prices, orders) + preset fragment  │
+│  3. Frontend POSTs to /api/chat (Next.js proxy)          │
+│  4. /api/chat streams response from Anthropic SDK        │
+│  5. Frontend renders streaming text in chat              │
+│  6. After stream completes → parse for proposal JSON     │
+│  7. If proposal → show ProposalEditor (left panel)       │
+│  8a. User edits + confirms → ConfirmationModal           │
+│      → POST /api/orders → clear chat after 2.5s delay    │
+│  8b. User rejects → append rejection to chat history     │
+│      → clear activeProposal                              │
+│                                                          │
+└──────────────────────────┬──────────────────────────────┘
                            │ confirmed proposal
                            ▼
-┌──────────────────────────────────────────────────────┐
-│                    Backend                            │
-│  Receives confirmed proposal → executes on-chain     │
-└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    Backend                                │
+│  Receives confirmed proposal → executes on-chain         │
+│  Orders polled via GET /api/orders every 5s              │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -39,19 +45,22 @@ Before each Claude call, the frontend assembles a context bundle from locally av
 
 ### Data Sources
 
-| Data            | Source                         | When fetched            |
-| --------------- | ------------------------------ | ----------------------- |
-| Trading profile | Local state (preset selection) | Already in memory       |
-| Wallet balances | `GET /api/portfolio`           | On chat mount + refresh |
-| Open orders     | `GET /api/orders`              | On chat mount + refresh |
-| Price feeds     | `GET /api/prices`              | Before each message     |
-| Chat history    | Local state (message array)    | Already in memory       |
+| Data            | Source                                          | When fetched                        |
+| --------------- | ----------------------------------------------- | ----------------------------------- |
+| Trading preset  | `GET /api/users?walletAddress=…` on mount       | Once, stored in dashboard state     |
+| Preset fragment | `src/lib/presets.ts` — matched from preset type | Derived from preset state           |
+| Wallet balances | React Query cache `["portfolio", address]`      | On mount + every 30s                |
+| Open orders     | React Query cache `["orders"]`                  | On mount + every 5s                 |
+| Price feeds     | React Query cache `["prices"]`                  | On mount + every 30s                |
+| Chat history    | Local state (message array)                     | Already in memory, capped at 25 msg |
 
 ### Context Refresh Strategy
 
-- Portfolio and orders: fetched on chat page mount, re-fetched every 30 seconds or after a confirmed transaction
-- Price feeds: fetched fresh before each message sent to Claude
-- Chat history: maintained in frontend state, passed as conversation messages
+- System prompt assembled fresh before each `sendMessage` call from React Query cache snapshots
+- Portfolio and prices: `refetchInterval: 30_000`
+- Orders: `refetchInterval: 5000` (fast poll to reflect execution status)
+- After a confirmed order: `queryClient.invalidateQueries({ queryKey: ["orders"] })` forces immediate refresh
+- Chat history: capped at last 25 messages with simple FIFO trim
 
 ---
 
@@ -82,23 +91,30 @@ Balances:
 
 You MUST respond in one of these three formats:
 
-### Format 1: Transaction Proposal
-When the user wants to execute a trade, wrap your proposal in a ```json code block with this exact structure:
+### Format 1: Trading Strategy Proposal
+When the user wants to execute a trade, set up a strategy, or send tokens, wrap your proposal in a ```json code block with this exact structure:
 
 ```json
 {
-  "type": "swap" | "limit_order" | "stop_loss" | "take_profit",
-  "action": "buy" | "sell",
-  "token_in": "<symbol>",
-  "token_out": "<symbol>",
-  "amount_in": "<amount as string>",
-  "expected_out": "<amount as string>",
-  "slippage_tolerance": "<percentage as string>",
-  "condition": "<price condition if limit/SL/TP, null for swap>",
-  "reasoning": "<1-2 sentence explanation>"
+  "title": "<short strategy name, e.g. 'Exit ETH at 3 levels'>",
+  "reasoning": "<1-2 sentence explanation of the overall strategy>",
+  "token_in": "<symbol of token being sold/sent>",
+  "token_out": "<symbol of token being received>",
+  "trades": [
+    {
+      "type": "swap" | "limit_order" | "send",
+      "amount_in": "<amount as string>",
+      "expected_out": "<amount as string>",
+      "slippage_tolerance": "<percentage as string>",
+      "tradingPriceUsd": <price in USD as number, or null for market swaps>
+    }
+  ]
 }
 ````
 
+For a simple swap, `trades` contains exactly one entry with `type: "swap"` and `tradingPriceUsd: null`.
+For an exit strategy, `trades` contains multiple limit orders at different price targets.
+For a send, `type` is `"send"` and `token_out` on the strategy is `null`.
 You may include conversational text before or after the JSON block.
 
 ### Format 2: Informational Response
@@ -127,7 +143,7 @@ When the user's intent is ambiguous or missing critical details (which token, ho
 
 ```typescript
 const response = await anthropic.messages.create({
-  model: "claude-sonnet-4-6-20250514",
+  model: "claude-haiku-4-5-20251001", // haiku for dev/testing; switch to claude-sonnet-4-6 for production
   max_tokens: 1024,
   system: assembledSystemPrompt,
   messages: conversationHistory,
@@ -165,45 +181,54 @@ The frontend must parse Claude's response to detect transaction proposals.
 ````typescript
 function parseAgentResponse(content: string): {
   text: string;
-  proposal: TransactionProposal | null;
+  strategy: TradingStrategy | null;
 } {
   // 1. Extract JSON block from markdown code fence
   const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
 
   if (!jsonMatch) {
-    return { text: content, proposal: null };
+    return { text: content, strategy: null };
   }
 
   // 2. Parse and validate the JSON
   const parsed = JSON.parse(jsonMatch[1]);
 
   // 3. Validate required fields
-  const required = ["type", "action", "token_in", "token_out", "amount_in"];
-  const valid = required.every((field) => parsed[field]);
+  const valid =
+    parsed.title &&
+    parsed.token_in &&
+    parsed.token_out &&
+    Array.isArray(parsed.trades) &&
+    parsed.trades.length > 0 &&
+    parsed.trades.every((t: Trade) => t.type && t.amount_in);
 
   if (!valid) {
-    return { text: content, proposal: null };
+    return { text: content, strategy: null };
   }
 
-  // 4. Return both the conversational text and the structured proposal
+  // 4. Return both the conversational text and the structured strategy
   const text = content.replace(/```json[\s\S]*?```/, "").trim();
-  return { text, proposal: parsed };
+  return { text, strategy: parsed };
 }
 ````
 
-### TransactionProposal Type
+### TradingStrategy Type
 
 ```typescript
-interface TransactionProposal {
-  type: "swap" | "limit_order" | "stop_loss" | "take_profit";
-  action: "buy" | "sell";
-  token_in: string;
-  token_out: string;
+interface Trade {
+  type: "send" | "swap" | "limit_order";
   amount_in: string;
   expected_out: string;
   slippage_tolerance: string;
-  condition: string | null;
+  tradingPriceUsd: number | null;
+}
+
+interface TradingStrategy {
+  title: string;
   reasoning: string;
+  token_in: string;
+  token_out: string;
+  trades: Trade[];
 }
 ```
 
@@ -211,19 +236,27 @@ interface TransactionProposal {
 
 ## 5. Confirmation Flow
 
-When a proposal is detected:
+When a strategy is detected:
 
 ```
-1. Render Claude's text response in chat
-2. Render proposal as a styled card below the message:
-   - Action summary: "Swap 2 ETH → USDC"
-   - Expected output + slippage
-   - Reasoning from Claude
-   - [Confirm] [Reject] buttons
-3. On Confirm → POST /api/orders with proposal payload
-4. On Reject → append "User rejected this proposal" to chat history
-5. Backend responds with order ID + status
-6. Frontend shows execution status in chat
+1. Render Claude's text response in chat (strategy JSON stripped from display)
+2. Left panel switches from PortfolioView → ProposalEditor
+   - Strategy title + reasoning shown at top
+   - Each trade rendered as a shadcn Collapsible row
+     - Header: "{action} {amount_in} {token_in} → {token_out} @ {condition}"
+     - Open form: all trade fields editable inline
+   - Single swap defaults to open; multi-trade strategies default to closed
+   - User can add/remove trades
+   - [Confirm] [Cancel] buttons at bottom
+3. On Confirm → opens ConfirmationModal showing strategy title + trade count
+   → POST /api/orders with full TradingStrategy payload
+   → Show "Strategy submitted. Starting fresh — what's next?" in chat
+   → After 2.5s delay: clear all chat messages
+   → Invalidate orders query (ProposalsHistory picks up new orders)
+4. On Cancel/Reject → append "I rejected this proposal." to chat history
+   → Clear activeStrategy → left panel returns to PortfolioView
+5. Order status tracked via 5s polling of GET /api/orders (all orders for address)
+   → No per-order polling in MVP
 ```
 
 ---
@@ -266,38 +299,42 @@ Proposal detection and the confirmation modal only trigger **after** the full st
 
 ## 8. API Key Handling
 
-The Claude API key is used from the frontend. For MVP/hackathon:
+The Claude API key is used in the Next.js API route (`/api/chat`), never exposed to the browser:
 
-- API key stored as `NEXT_PUBLIC_ANTHROPIC_API_KEY` env var
-- Loaded via Next.js public env (acceptable for hackathon demo)
-- **Post-hackathon:** move to backend proxy or edge function to protect key
+- API key stored as `ANTHROPIC_API_KEY` (server-only env var, no `NEXT_PUBLIC_` prefix)
+- The `/api/chat` route is the sole entry point — it owns the Anthropic client instance
+- This also resolves the CORS blocker from direct browser-to-Anthropic calls
 
 ---
 
 ## 9. Preset Integration
 
-The `{preset_system_prompt_fragment}` in the system prompt is swapped based on the user's selected preset:
+The preset is fetched once on dashboard mount via `GET /api/users?walletAddress=…` and stored in component state. The `buildSystemPrompt` function in `src/lib/presets.ts` selects the correct fragment:
 
-| Preset        | Fragment source                                        |
-| ------------- | ------------------------------------------------------ |
-| Institutional | `agent-presets/institutional-preset.md` → prompt block |
-| Degen         | `agent-presets/degen-preset.md` → prompt block         |
+| Preset        | Fragment                                    |
+| ------------- | ------------------------------------------- |
+| `degen`       | CT degen persona, 5% slippage, any token    |
+| `institutional` | Risk analyst persona, 0.3% slippage, whitelist |
 
-Both fragments define: persona, tone, constraints, slippage, and token scope.
+Both fragments define: persona, tone, constraints, slippage, and token scope. Preset is locked after onboarding — no switching in MVP.
 
 ---
 
 ## Tasks
 
-- [ ] Create `anthropic` client wrapper in `apps/web/lib/claude.ts`
-- [ ] Build context assembler that fetches portfolio, orders, prices and constructs system prompt
-- [ ] Implement streaming chat hook (`useChat` or custom) that calls Claude and handles deltas
-- [ ] Build response parser to extract JSON proposals from Claude responses
-- [ ] Wire proposal detection to confirmation modal component
-- [ ] Add conversation history management with 50-message cap
-- [ ] Integrate preset system prompt fragments into context assembler
-- [ ] Handle error states (rate limit, API errors, invalid JSON)
-- [ ] Add `NEXT_PUBLIC_ANTHROPIC_API_KEY` to Vercel env config
+- [x] Create `/api/chat` Next.js route as Anthropic SDK streaming proxy
+- [x] Create `src/lib/presets.ts` — preset fragments + `buildSystemPrompt`
+- [x] Assemble system prompt from React Query cache before each `sendMessage`
+- [x] Fetch user preset on dashboard mount, store in state
+- [x] Stream Claude response to chat, parse full message after stream completes
+- [x] Confirm flow: POST /api/orders → show done message → clear chat after 2.5s
+- [x] Reject flow: append rejection message → clear activeStrategy
+- [x] Poll all orders every 5s via ProposalsHistory `refetchInterval`
+- [x] Handle error states (agent unavailable message in chat)
+- [x] Update `src/lib/claude.ts` — replace `TransactionProposal` with `Trade` + `TradingStrategy`, update `parseAgentResponse`
+- [x] Update system prompt Format 1 in `src/lib/presets.ts` to strategy JSON shape
+- [x] Wire strategy detection to ProposalEditor (left panel swap)
+- [ ] Add `ANTHROPIC_API_KEY` to production env config
 
 ---
 
