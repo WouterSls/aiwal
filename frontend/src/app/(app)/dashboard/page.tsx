@@ -47,14 +47,25 @@ export default function DashboardPage() {
 
     async function checkUserProfile() {
       const address = accounts[0].address;
-      const res = await fetch(`/api/users?walletAddress=${address}`);
-      if (res.status === 404) {
-        router.replace("/onboard");
-        return;
+      try {
+        const res = await fetch(`/api/users?walletAddress=${address}`);
+        if (res.status === 404) {
+          router.replace("/onboard");
+          return;
+        }
+        const user = await res.json();
+        setPreset(user.preset as TradePreset);
+        setAuthorized(true);
+      } catch (error: unknown) {
+        let errorMessage = error instanceof Error ? error.message : "Unknown";
+        if (errorMessage.includes("Failed to execute")) {
+          errorMessage = "Internal Server Error";
+        }
+
+        toast.error("Error Checking User profile", {
+          description: errorMessage,
+        });
       }
-      const user = await res.json();
-      setPreset(user.preset as TradePreset);
-      setAuthorized(true);
     }
 
     checkUserProfile();
