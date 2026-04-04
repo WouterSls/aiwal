@@ -1,0 +1,78 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Param,
+  Post,
+} from '@nestjs/common';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { OrderResponseDto } from './dto/order-response.dto';
+import { CreateProposalDto } from './dto/create-proposal.dto';
+import { ProposalResponseDto } from './dto/proposal-response.dto';
+import { OrdersService } from './orders.service';
+import { ProposalsService } from './proposals.service';
+
+@Controller('api/proposals')
+export class ProposalsController {
+  constructor(
+    private readonly proposalsService: ProposalsService,
+    private readonly ordersService: OrdersService,
+  ) {}
+
+  @Post()
+  async create(
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateProposalDto,
+  ): Promise<ProposalResponseDto> {
+    const proposal = await this.proposalsService.create({
+      userId,
+      title: dto.title,
+      reasoning: dto.reasoning,
+      tokenIn: dto.tokenIn,
+      tokenOut: dto.tokenOut,
+    });
+    await this.ordersService.createForProposal(proposal, dto.orders);
+    return ProposalResponseDto.from(proposal);
+  }
+
+  @Get()
+  async findAll(@CurrentUser('id') userId: string): Promise<ProposalResponseDto[]> {
+    const proposals = await this.proposalsService.findByUserId(userId);
+    return proposals.map((p) => ProposalResponseDto.from(p));
+  }
+
+  @Get(':id')
+  async findOne(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ): Promise<ProposalResponseDto> {
+    const proposal = await this.proposalsService.findById(id);
+    if (proposal.userId !== userId) throw new NotFoundException('Proposal not found');
+    return ProposalResponseDto.from(proposal);
+  }
+
+  @Get(':id/orders')
+  async findOrders(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ): Promise<OrderResponseDto[]> {
+    const proposal = await this.proposalsService.findById(id);
+    if (proposal.userId !== userId) throw new NotFoundException('Proposal not found');
+    const orders = await this.ordersService.findByProposalId(id);
+    return orders.map((o) => OrderResponseDto.from(o));
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  async cancel(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ): Promise<void> {
+    const proposal = await this.proposalsService.findById(id);
+    if (proposal.userId !== userId) throw new NotFoundException('Proposal not found');
+    await this.ordersService.cancelProposal(id);
+  }
+}

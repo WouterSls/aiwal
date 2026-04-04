@@ -9,8 +9,6 @@ import {
 } from 'typeorm';
 import { ProposalEntity } from './proposal.entity';
 
-export type OrderStatus = 'pending' | 'executing' | 'completed' | 'failed';
-
 @Entity('orders')
 export class OrderEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -23,11 +21,29 @@ export class OrderEntity {
   @JoinColumn({ name: 'proposalId' })
   proposal: ProposalEntity;
 
+  @Column()
+  type: string;
+
+  @Column()
+  amountIn: string;
+
   @Column({ nullable: true })
-  txHash: string | null;
+  expectedOut: string | null;
+
+  @Column({ nullable: true })
+  to: string | null;
+
+  @Column({ nullable: true })
+  slippageTolerance: string | null;
+
+  @Column({ nullable: true, type: 'float' })
+  tradingPriceUsd: number | null;
+
+  @Column({ nullable: true })
+  confirmationHash: string | null;
 
   @Column({ default: 'pending' })
-  status: OrderStatus;
+  status: string;
 
   @CreateDateColumn()
   createdAt: Date;

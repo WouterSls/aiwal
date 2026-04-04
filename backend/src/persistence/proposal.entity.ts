@@ -9,10 +9,6 @@ import {
 } from 'typeorm';
 import { UserEntity } from '../users/user.entity';
 
-export type ProposalType = 'market' | 'limit' | 'stop_loss' | 'take_profit';
-export type ProposalAction = 'buy' | 'sell';
-export type ProposalStatus = 'confirmed' | 'completed' | 'failed';
-
 @Entity('proposals')
 export class ProposalEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -26,10 +22,10 @@ export class ProposalEntity {
   user: UserEntity;
 
   @Column()
-  type: ProposalType;
+  title: string;
 
-  @Column()
-  action: ProposalAction;
+  @Column({ type: 'text' })
+  reasoning: string;
 
   @Column()
   tokenIn: string;
@@ -37,20 +33,8 @@ export class ProposalEntity {
   @Column()
   tokenOut: string;
 
-  @Column()
-  amountIn: string;
-
-  @Column({ nullable: true })
-  expectedOut: string | null;
-
-  @Column({ nullable: true })
-  slippage: string | null;
-
-  @Column({ nullable: true, type: 'text' })
-  condition: string | null;
-
-  @Column({ default: 'confirmed' })
-  status: ProposalStatus;
+  @Column({ default: 'accepted' })
+  status: string;
 
   @CreateDateColumn()
   createdAt: Date;
