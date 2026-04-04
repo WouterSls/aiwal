@@ -2,7 +2,7 @@
 
 > ETHGlobal Cannes 2026 · MVP
 
-A next-generation web3 wallet that acts as an autonomous, AI-powered trading agent. Users deposit assets, set a trading profile, and interact via natural language. The context-aware AI proposes on-chain transactions, which the user confirms. Chainlink CRE feeds real-time market intelligence into the agent's reasoning loop while all execution happens on-chain via Uniswap on Base.
+A next-generation web3 wallet that enables onchain automation. Users deposit assets, set a trading profile, and interact via natural language. The context-aware AI proposes on-chain transactions or strategies, which the user confirms. Chainlink CRE feeds real-time market intelligence into the agent's reasoning loop and the backend trigger mechanism, while all execution happens on-chain via Uniswap on Base.
 
 ---
 
@@ -18,16 +18,16 @@ A next-generation web3 wallet that acts as an autonomous, AI-powered trading age
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js (App Router), Tailwind CSS, shadcn/ui |
-| Backend | NestJS, TypeScript, TypeORM |
-| AI | Claude API (context injection) |
-| Wallet | Dynamic SDK (embedded wallets, social login) |
-| Market data | Chainlink CRE price feeds |
-| Execution | Uniswap API on Base |
-| Database | SQLite (dev) / Postgres (prod) |
-| Hosting | Vercel (frontend) + VPS (backend) |
+| Layer       | Technology                                    |
+| ----------- | --------------------------------------------- |
+| Frontend    | Next.js (App Router), Tailwind CSS, shadcn/ui |
+| Backend     | NestJS, TypeScript, TypeORM                   |
+| AI          | Claude API (context injection)                |
+| Wallet      | Dynamic SDK (embedded wallets, social login)  |
+| Market data | Chainlink CRE price feeds                     |
+| Execution   | Uniswap API on Base                           |
+| Database    | SQLite (dev) / Postgres (prod)                |
+| Hosting     | Vercel (frontend) + VPS (backend)             |
 
 ---
 
@@ -44,11 +44,11 @@ aiwal/
 
 ## Pages
 
-| Route | Description |
-|---|---|
-| `/` | Landing page — connect wallet via Dynamic |
-| `/onboard` | One-time trading profile selection |
-| `/dashboard` | Chat interface + portfolio view |
+| Route        | Description                               |
+| ------------ | ----------------------------------------- |
+| `/`          | Landing page — connect wallet via Dynamic |
+| `/onboard`   | One-time trading profile selection        |
+| `/dashboard` | Chat interface + portfolio view           |
 
 ---
 
@@ -68,27 +68,27 @@ aiwal/
 WalletModule → PriceFeedModule → OrdersModule → ExecutionModule → AgentModule → ChatModule
 ```
 
-| Module | Responsibility |
-|---|---|
-| AuthModule | Dynamic SDK session validation, JWT issuance |
-| UsersModule | User CRUD, preset management |
-| WalletModule | Dynamic embedded wallet operations |
-| PriceFeedModule | Chainlink CRE price feeds |
-| OrdersModule | Proposals, order lifecycle management |
-| ExecutionModule | Uniswap swap execution |
-| AgentModule | Claude API, context injection |
-| ChatModule | WebSocket gateway, response streaming |
+| Module          | Responsibility                               |
+| --------------- | -------------------------------------------- |
+| AuthModule      | Dynamic SDK session validation, JWT issuance |
+| UsersModule     | User CRUD, preset management                 |
+| WalletModule    | Dynamic embedded wallet operations           |
+| PriceFeedModule | Chainlink CRE price feeds                    |
+| OrdersModule    | Proposals, order lifecycle management        |
+| ExecutionModule | Uniswap swap execution                       |
+| AgentModule     | Claude API, context injection                |
+| ChatModule      | WebSocket gateway, response streaming        |
 
 ---
 
 ## Order Types
 
-| Type | Trigger |
-|---|---|
+| Type        | Trigger                        |
+| ----------- | ------------------------------ |
 | Market Swap | Immediate on user confirmation |
-| Limit Order | Price reaches target |
-| Stop Loss | Price drops below threshold |
-| Take Profit | Price rises above threshold |
+| Limit Order | Price reaches target           |
+| Stop Loss   | Price drops below threshold    |
+| Take Profit | Price rises above threshold    |
 
 ---
 
@@ -102,6 +102,7 @@ WalletModule → PriceFeedModule → OrdersModule → ExecutionModule → AgentM
 ### Environment Variables
 
 **Backend** (`.env`):
+
 ```
 CLAUDE_API_KEY=
 DYNAMIC_API_KEY=
@@ -114,6 +115,7 @@ FRONTEND_URL=
 ```
 
 **Frontend** (`.env.local`):
+
 ```
 NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=
 NEXT_PUBLIC_API_URL=
