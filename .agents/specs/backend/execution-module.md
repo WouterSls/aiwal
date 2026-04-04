@@ -45,7 +45,7 @@ export class ExecutionService implements OnModuleInit {
   }
 
   private async onExecute(payload: OrderExecutePayload): Promise<void>;
-  // 1. WalletService.getDecryptedDelegation(userId) → { dynamicWalletId, delegatedShare, walletApiKey }
+  // 1. WalletService.getDecryptedDelegation(userId) → { dynamicWalletId, delegatedShare, walletApiKey, walletAddress }
   //    Throws NotFoundException if user has no delegation → caught below → emits failure
   // 2. fetchSwapCalldata(tokenIn, tokenOut, amountIn, walletAddress, slippageTolerance)
   //    → { to, value, data }
@@ -84,7 +84,6 @@ interface OrderExecutePayload {
   orderId: string;
   proposalId: string;
   userId: string;
-  walletAddress: string;   // needed as `swapper` in Uniswap API call
   tokenIn: string;
   tokenOut: string;
   amountIn: string;
@@ -99,15 +98,13 @@ interface OrderExecutedPayload {
 }
 ```
 
-> `walletAddress` must be added to the `order.execute` payload. OrdersModule sources it from `req.user.walletAddress` at proposal creation time.
-
 ## Execution Flow
 
 ```
 EventEmitter: 'order.execute'
   │
   ├── WalletService.getDecryptedDelegation(userId)
-  │     → { dynamicWalletId, delegatedShare, walletApiKey }
+  │     → { dynamicWalletId, delegatedShare, walletApiKey, walletAddress }
   │     throws NotFoundException if no active delegation
   │
   ├── fetchSwapCalldata(tokenIn, tokenOut, amountIn, walletAddress, slippageTolerance)
