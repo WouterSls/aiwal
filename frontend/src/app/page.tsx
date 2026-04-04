@@ -35,8 +35,11 @@ export default function LandingPage() {
             const accounts = await getWalletAccounts(dynamicClient);
             const walletAddress = accounts[0].address;
 
+            const token = dynamicClient.token;
+
             const res = await fetch(
-              `/api/wallets?walletAddress=${walletAddress}`,
+              `/api/users?walletAddress=${walletAddress}`,
+              { headers: { Authorization: `Bearer ${token}` } },
             );
 
             if (res.ok) {
