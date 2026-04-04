@@ -138,16 +138,20 @@ respond to their request with one of:
 
 Transaction proposal format:
 {
-  "type": "swap" | "limit_order" | "stop_loss" | "take_profit",
-  "action": "buy" | "sell",
+  "title": "<short label for this strategy>",
+  "reasoning": "<why this trade makes sense>",
   "token_in": "<symbol>",
   "token_out": "<symbol>",
-  "amount_in": "<amount>",
-  "expected_out": "<amount>",
-  "slippage_tolerance": "<percentage>",
-  "condition": "<price condition if limit/SL/TP>",
-  "gas_estimate": "<estimate>",
-  "reasoning": "<why this trade makes sense>"
+  "trades": [
+    {
+      "type": "send" | "swap" | "limit_order",
+      "amount_in": "<amount>",
+      "expected_out": "<expected output amount>",
+      "to": "<recipient address — only for send>",
+      "slippage_tolerance": "<percentage>",
+      "trading_price_usd": "<trigger price — only for limit_order>"
+    }
+  ]
 }
 ```
 
@@ -166,21 +170,20 @@ Manages all order types and their lifecycle.
 
 **Order types:**
 | Type | Trigger | Execution |
-| ------------ | -------------------------------- | -------------------------- |
-| Market Swap | Immediate (user confirms) | Uniswap swap |
-| Limit Order | Price reaches target | Uniswap swap via CRE signal|
-| Stop Loss | Price drops below threshold | Uniswap swap via CRE signal|
-| Take Profit | Price rises above threshold | Uniswap swap via CRE signal|
+| ------------- | -------------------------------- | -------------------------- |
+| send | Immediate (user confirms) | Wallet transfer |
+| swap | Immediate (user confirms) | Uniswap swap |
+| limit_order | Price reaches trading_price_usd | Uniswap swap via CRE signal|
 
 **Order lifecycle:**
 
 ```
-CREATED → PENDING → TRIGGERED → EXECUTING → COMPLETED
-                                          → FAILED
-                  → CANCELLED
+pending → submitted → completed
+                    → failed
+        → cancelled  (proposal cancelled by user)
 ```
 
-**Storage:** Orders stored in DB with: user ID, type, params, condition, status, timestamps, tx hash.
+**Storage:** Orders stored in DB with: proposal ID, type, amount, recipient (send only), slippage, trigger price (limit only), tx hash, status, timestamps.
 
 #### 2.3 PriceFeedModule — Chainlink CRE Integration
 
@@ -328,31 +331,33 @@ users (
   created_at          TIMESTAMP DEFAULT NOW()
 )
 
--- Proposals: parsed Claude AI transaction proposals
+-- Proposals: Claude AI trading strategies confirmed by the user
 proposals (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users(id),
-  type            TEXT NOT NULL,             -- 'market' | 'limit' | 'stop_loss' | 'take_profit'
-  action          TEXT NOT NULL,             -- 'buy' | 'sell'
-  token_in        TEXT NOT NULL,
-  token_out       TEXT NOT NULL,
-  amount_in       TEXT NOT NULL,             -- string for precision
-  expected_out    TEXT,
-  slippage        TEXT,
-  condition       TEXT,                      -- JSON: price condition for limit/SL/TP
-  status          TEXT NOT NULL DEFAULT 'confirmed',  -- 'confirmed' | 'completed' | 'failed'
-  created_at      TIMESTAMP DEFAULT NOW(),
-  updated_at      TIMESTAMP DEFAULT NOW()
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES users(id),
+  title       TEXT NOT NULL,
+  reasoning   TEXT NOT NULL,
+  token_in    TEXT NOT NULL,
+  token_out   TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'accepted',  -- 'accepted' | 'declined' | 'cancelled'
+  created_at  TIMESTAMP DEFAULT NOW(),
+  updated_at  TIMESTAMP DEFAULT NOW()
 )
 
--- Orders: Uniswap API swap executions linked to a proposal
+-- Orders: individual trade executions linked to a proposal
 orders (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  proposal_id     UUID NOT NULL REFERENCES proposals(id),
-  tx_hash         TEXT,
-  status          TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'executing' | 'completed' | 'failed'
-  created_at      TIMESTAMP DEFAULT NOW(),
-  updated_at      TIMESTAMP DEFAULT NOW()
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  proposal_id        UUID NOT NULL REFERENCES proposals(id),
+  type               TEXT NOT NULL,              -- 'send' | 'swap' | 'limit_order'
+  amount_in          TEXT NOT NULL,
+  expected_out       TEXT,
+  to                 TEXT,                       -- optional recipient address for 'send' orders
+  slippage_tolerance TEXT,
+  trading_price_usd  DECIMAL,                    -- null for send/swap; trigger price for limit_order
+  confirmation_hash            TEXT,
+  status             TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'submitted' | 'completed' | 'failed' | 'cancelled'
+  created_at         TIMESTAMP DEFAULT NOW(),
+  updated_at         TIMESTAMP DEFAULT NOW()
 )
 ```
 
@@ -360,11 +365,12 @@ orders (
 
 ```
 User.delegation_active: false → true (lazy — set on first trade confirmation via webhook)
-Proposal: confirmed → completed (all orders done) / failed
-Order: pending → executing → completed / failed
+Proposal: accepted → cancelled (user-initiated at any time)
+Order:    pending → submitted → completed / failed
+          pending | submitted → cancelled (when parent proposal is cancelled)
 ```
 
-When all orders under a proposal reach a terminal state, the proposal status updates accordingly.
+When a proposal is cancelled, all non-terminal orders are set to `cancelled`. Completed and failed orders are preserved as history.
 
 ---
 
@@ -376,13 +382,14 @@ When all orders under a proposal reach a terminal state, the proposal status upd
 | ------ | ------------------------- | ---------------------------------------- |
 | GET    | `/api/users?walletAddress=` | Look up user by wallet address. 200 + user profile if found, 404 if not. No auth required. |
 | POST   | `/api/users`              | Create user with wallet address + preset in one shot. No auth required. |
-| POST   | `/api/chat`               | Send message, get agent response. Requires JWT. |
-| GET    | `/api/portfolio`          | Wallet balances + token values           |
-| GET    | `/api/orders`             | List user's orders                       |
-| POST   | `/api/orders`             | Create order (from confirmed proposal)   |
-| DELETE | `/api/orders/:id`         | Cancel an order                          |
-| POST   | `/api/orders/:id/confirm` | Trigger delegation (if needed) + execute |
-| GET    | `/api/prices`             | Current Chainlink price feeds            |
+| POST   | `/api/chat`                  | Send message, get agent response. Requires JWT. |
+| GET    | `/api/portfolio`             | Wallet balances + token values           |
+| GET    | `/api/proposals`             | List user's proposals                    |
+| POST   | `/api/proposals`             | Create proposal + orders from confirmed strategy |
+| GET    | `/api/proposals/:id`         | Get single proposal                      |
+| GET    | `/api/proposals/:id/orders`  | List orders under a proposal             |
+| DELETE | `/api/proposals/:id`         | Cancel proposal and all active orders    |
+| GET    | `/api/prices`                | Current Chainlink price feeds            |
 | POST   | `/api/webhooks/dynamic`   | Receive Dynamic delegation webhook (no JWT — HMAC-SHA256 only) |
 
 ---

@@ -38,20 +38,17 @@ Manages the active order watch list and fetches prices via Uniswap Quoter API.
 ```typescript
 // pricefeed/pricefeed.service.ts
 
-export interface OrderCondition {
-  type: 'price_above' | 'price_below';
-  threshold: number;
-}
+const STABLECOINS = new Set<string>([/* USDC, USDT, DAI addresses on Base */]);
 
 @Injectable()
 export class PriceFeedService {
-  private watchedOrders = new Map<string, { tokenAddress: string; condition: OrderCondition }>();
+  private watchedOrders = new Map<string, { tokenIn: string; tokenOut: string; tradingPriceUsd: number }>();
 
-  watchOrder(orderId: string, tokenAddress: string, condition: OrderCondition): void
+  watchOrder(orderId: string, tokenIn: string, tokenOut: string, tradingPriceUsd: number): void
 
   unwatchOrder(orderId: string): void
 
-  getWatchedOrders(): Map<string, { tokenAddress: string; condition: OrderCondition }>
+  getWatchedOrders(): Map<string, { tokenIn: string; tokenOut: string; tradingPriceUsd: number }>
 
   async fetchPrice(tokenAddress: string): Promise<number>
 
@@ -102,27 +99,32 @@ export class BlockListenerService implements OnModuleInit, OnModuleDestroy {
     this.provider.on('block', async () => {
       const watched = new Map(this.priceFeedService.getWatchedOrders()); // snapshot to avoid mutation during iteration
 
-      const tokenAddresses = [...new Set([...watched.values()].map(o => o.tokenAddress))];
+      const tokenAddresses = [...new Set([...watched.values()].map(({ tokenIn, tokenOut }) => {
+        const isBuy = STABLECOINS.has(tokenIn);
+        return isBuy ? tokenOut : tokenIn;
+      }))];
       const prices = await this.priceFeedService.fetchPrices(tokenAddresses);
 
       const triggered: string[] = [];
 
-      for (const [orderId, { tokenAddress, condition }] of watched) {
-        const priceInUsdc = prices.get(tokenAddress);
-        if (priceInUsdc === undefined) continue; // fetch failed for this token, skip
+      for (const [orderId, { tokenIn, tokenOut, tradingPriceUsd }] of watched) {
+        const isBuy = STABLECOINS.has(tokenIn);
+        const tokenToPrice = isBuy ? tokenOut : tokenIn;
+        const usdcPrice = prices.get(tokenToPrice);
+        if (usdcPrice === undefined) continue; // fetch failed for this token, skip
 
-        const conditionMet =
-          condition.type === 'price_above'
-            ? priceInUsdc >= condition.threshold
-            : priceInUsdc <= condition.threshold;
+        const conditionMet = isBuy
+          ? usdcPrice <= tradingPriceUsd
+          : usdcPrice >= tradingPriceUsd;
 
         if (conditionMet) triggered.push(orderId);
       }
 
       for (const orderId of triggered) {
-        const { tokenAddress } = watched.get(orderId)!;
-        const priceInUsdc = prices.get(tokenAddress)!;
-        this.eventEmitter.emit('order.condition.met', { orderId, tokenAddress, priceInUsdc });
+        const { tokenIn, tokenOut, tradingPriceUsd } = watched.get(orderId)!;
+        const isBuy = STABLECOINS.has(tokenIn);
+        const usdcPrice = prices.get(isBuy ? tokenOut : tokenIn)!;
+        this.eventEmitter.emit('order.condition.met', { orderId, usdcPrice });
         this.priceFeedService.unwatchOrder(orderId);
       }
     });
@@ -138,7 +140,7 @@ export class BlockListenerService implements OnModuleInit, OnModuleDestroy {
 }
 ```
 
-`order.condition.met` payload: `{ orderId, tokenAddress, priceInUsdc }` — consumed by `OrdersModule` to trigger execution.
+`order.condition.met` payload: `{ orderId, usdcPrice }` — consumed by `OrdersModule` to trigger execution.
 
 ## AppModule Wiring
 
