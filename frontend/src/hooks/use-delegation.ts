@@ -17,7 +17,9 @@ export async function delegate(): Promise<void> {
   console.log("delegate 1");
   if (!accounts.length) return;
   console.log("delegate 2");
-  if (hasDelegatedAccess({ walletAccount: accounts[0] })) return;
+  // if (hasDelegatedAccess({ walletAccount: accounts[0] })) {
+  //   return;
+  // }
   console.log("delegate 3");
   await delegateWaasKeyShares({ walletAccount: accounts[0] });
   console.log("delegate 4");
