@@ -24,6 +24,7 @@ export default function DashboardPage() {
     null,
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmPending, setConfirmPending] = useState(false);
   const [preset, setPreset] = useState<TradePreset | null>(null);
 
   const [mounted, setMounted] = useState(false);
@@ -190,14 +191,18 @@ export default function DashboardPage() {
   function handleConfirm() {
     if (!activeProposal) return;
 
-    setConfirmOpen(false);
-    setActiveProposal(null);
-    const doneMsg: ChatMessage = {
-      role: "assistant",
-      content: "Order submitted. Starting fresh — what's next?",
-    };
-    setMessages([doneMsg]);
-    setTimeout(() => setMessages([]), 2500);
+    setConfirmPending(true);
+    setTimeout(() => {
+      setConfirmPending(false);
+      setConfirmOpen(false);
+      setActiveProposal(null);
+      const doneMsg: ChatMessage = {
+        role: "assistant",
+        content: "Order submitted. Starting fresh — what's next?",
+      };
+      setMessages([doneMsg]);
+      setTimeout(() => setMessages([]), 2500);
+    }, 2000);
 
     Promise.all([
       delegate(),
@@ -263,6 +268,7 @@ export default function DashboardPage() {
         <ConfirmationModal
           strategy={activeProposal}
           open={confirmOpen}
+          pending={confirmPending}
           onConfirm={handleConfirm}
           onCancel={() => setConfirmOpen(false)}
         />
