@@ -11,7 +11,6 @@ import { buildSystemPrompt, TradePreset } from "@/lib/presets";
 import { PortfolioView } from "@/components/portfolio-view";
 import { ProposalEditor } from "@/components/proposal-editor";
 import { ChatPanel, ChatMessage } from "@/components/chat-panel";
-import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ProposalsHistory } from "@/components/proposals-history";
 import { toast } from "sonner";
 import { useConfirmations } from "@/lib/use-confirmations";
@@ -23,8 +22,6 @@ export default function DashboardPage() {
   const [activeProposal, setActiveProposal] = useState<TradingStrategy | null>(
     null,
   );
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmPending, setConfirmPending] = useState(false);
   const [preset, setPreset] = useState<TradePreset | null>(null);
 
   const [mounted, setMounted] = useState(false);
@@ -189,38 +186,31 @@ export default function DashboardPage() {
   async function handleConfirm() {
     if (!activeProposal) return;
 
-    setConfirmPending(true);
-    try {
-      const token = dynamicClient.token;
-      await Promise.all([
-        delegate(),
-        fetch("/api/proposal", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            ...activeProposal,
-            wallet_address: getWalletAccounts(dynamicClient)[0]?.address,
-          }),
-        }),
-      ]);
-      queryClient.invalidateQueries({ queryKey: ["proposals"] });
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown";
-      toast.error("Error Submitting Propsal", { description: errorMessage });
-    } finally {
-      setConfirmPending(false);
-      setConfirmOpen(false);
-      setActiveProposal(null);
-      const doneMsg: ChatMessage = {
-        role: "assistant",
-        content: "Order submitted. Starting fresh — what's next?",
-      };
-      setMessages([doneMsg]);
-      setTimeout(() => setMessages([]), 2500);
-    }
+    const proposal = activeProposal;
+    setActiveProposal(null);
+    const doneMsg: ChatMessage = {
+      role: "assistant",
+      content: "Order submitted. Starting fresh — what's next?",
+    };
+    setMessages([doneMsg]);
+    setTimeout(() => setMessages([]), 2500);
+
+    fetch("/api/proposal", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${dynamicClient.token}`,
+      },
+      body: JSON.stringify({
+        ...proposal,
+        wallet_address: getWalletAccounts(dynamicClient)[0]?.address,
+      }),
+    })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["proposals"] }))
+      .catch((error: unknown) => {
+        const errorMessage = error instanceof Error ? error.message : "Unknown";
+        toast.error("Error Submitting Proposal", { description: errorMessage });
+      });
   }
 
   function handleCancelProposal() {
@@ -243,7 +233,7 @@ export default function DashboardPage() {
             <ProposalEditor
               strategy={activeProposal}
               onChange={setActiveProposal}
-              onConfirm={() => setConfirmOpen(true)}
+              onConfirm={handleConfirm}
               onCancel={handleCancelProposal}
             />
           ) : (
@@ -262,15 +252,6 @@ export default function DashboardPage() {
 
       <ProposalsHistory />
 
-      {activeProposal && (
-        <ConfirmationModal
-          strategy={activeProposal}
-          open={confirmOpen}
-          pending={confirmPending}
-          onConfirm={handleConfirm}
-          onCancel={() => setConfirmOpen(false)}
-        />
-      )}
     </>
   );
 }
