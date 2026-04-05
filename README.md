@@ -2,7 +2,7 @@
 
 > ETHGlobal Cannes 2026 · MVP
 
-A next-generation web3 wallet that enables onchain automation. Users deposit assets, set a trading profile, and interact via natural language. The context-aware AI proposes on-chain transactions or strategies, which the user confirms. Chainlink CRE feeds real-time market intelligence into the agent's reasoning loop and the backend trigger mechanism, while all execution happens on-chain via Uniswap on Base.
+A next-generation web3 wallet that enables onchain automation. Users deposit assets, set a trading profile, and interact via natural language. The context-aware AI proposes on-chain transactions or strategies, which the user confirms. Uniswap API feeds real-time market intelligence into the agent's reasoning loop and the backend trigger mechanism, while all execution happens on-chain via Uniswap API on Base.
 
 ---
 
