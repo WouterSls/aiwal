@@ -20,9 +20,8 @@ export function useConfirmations(walletAddress: string | undefined): void {
                 href={`https://basescan.org/tx/${hash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-500 underline"
               >
-                Transaction Hash: {hash}
+                Tx Hash: {hash.slice(0, 6)}...{hash.slice(-6)}
               </a>
             ),
           });
