@@ -13,11 +13,18 @@ export function useConfirmations(walletAddress: string | undefined): void {
 
       for (const c of confirmations) {
         if (c.status === 'completed' && c.confirmationHash) {
+          const hash = c.confirmationHash;
           toast.success("Transaction confirmed", {
-            action: {
-              label: "View on BaseScan",
-              onClick: () => window.open(`https://basescan.org/tx/${c.confirmationHash}`, "_blank"),
-            },
+            description: (
+              <a
+                href={`https://basescan.org/tx/${hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 underline"
+              >
+                Transaction Hash: {hash}
+              </a>
+            ),
           });
         } else if (c.status === 'completed') {
           toast.success("Transaction confirmed");
