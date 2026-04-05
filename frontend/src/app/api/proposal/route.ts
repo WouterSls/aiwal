@@ -1,4 +1,4 @@
-const BACKEND_URL = process.env.BACKEND_URL ?? "https://trader.senter.be";
+const BACKEND_URL = process.env.BACKEND_URL ?? "https://tader.senter.be";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
