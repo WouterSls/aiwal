@@ -57,7 +57,12 @@ export async function GET(request: Request) {
 
   const ethBalance = hexToDecimal(ethHex, 18);
   if (parseFloat(ethBalance) > 0) {
-    tokens.push({ symbol: "ETH", balance: parseFloat(ethBalance).toFixed(6), logoURI: "https://assets.coingecko.com/coins/images/279/large/ethereum.png" });
+    tokens.push({
+      symbol: "ETH",
+      address: "0x4200000000000000000000000000000000000006",
+      balance: parseFloat(ethBalance).toFixed(6),
+      logoURI: "https://assets.coingecko.com/coins/images/279/large/ethereum.png",
+    });
   }
 
   for (const { contractAddress, tokenBalance } of erc20Result.tokenBalances ?? []) {
@@ -69,6 +74,7 @@ export async function GET(request: Request) {
 
     tokens.push({
       symbol: entry.symbol,
+      address: contractAddress.toLowerCase(),
       balance: parseFloat(balance).toFixed(4),
       logoURI: entry.logoURI,
     });

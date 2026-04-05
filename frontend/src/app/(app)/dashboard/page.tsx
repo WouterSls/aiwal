@@ -86,12 +86,13 @@ export default function DashboardPage() {
   function buildCurrentSystemPrompt(): string | null {
     if (!preset || !address) return null;
     const portfolio =
-      queryClient.getQueryData<{ symbol: string; balance: string }[]>([
+      queryClient.getQueryData<{ symbol: string; address: string; balance: string }[]>([
         "portfolio",
         address,
       ]) ?? [];
+    const portfolioAddresses = portfolio.map((t) => t.address);
     const prices =
-      queryClient.getQueryData<Record<string, string>>(["prices"]) ?? {};
+      queryClient.getQueryData<Record<string, string>>(["prices", portfolioAddresses]) ?? {};
     const orders =
       queryClient.getQueryData<
         {

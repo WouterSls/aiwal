@@ -64,6 +64,7 @@ When the user's intent is ambiguous or missing critical details.
 
 interface PortfolioToken {
   symbol: string;
+  address: string;
   balance: string;
 }
 
@@ -90,8 +91,8 @@ export function buildSystemPrompt(
     portfolio.length > 0
       ? portfolio
           .map((t) => {
-            const usd = prices[t.symbol]
-              ? `($${(parseFloat(t.balance) * parseFloat(prices[t.symbol])).toFixed(2)})`
+            const usd = prices[t.address]
+              ? `($${(parseFloat(t.balance) * parseFloat(prices[t.address])).toFixed(2)})`
               : "";
             return `  ${t.symbol}: ${t.balance} ${usd}`;
           })
@@ -109,9 +110,10 @@ export function buildSystemPrompt(
       : "  No open orders";
 
   const formattedPrices =
-    Object.keys(prices).length > 0
-      ? Object.entries(prices)
-          .map(([symbol, price]) => `  ${symbol}: $${price}`)
+    portfolio.length > 0
+      ? portfolio
+          .filter((t) => prices[t.address])
+          .map((t) => `  ${t.symbol}: $${prices[t.address]}`)
           .join("\n")
       : "  Price data unavailable";
 

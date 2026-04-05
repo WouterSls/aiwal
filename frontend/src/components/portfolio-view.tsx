@@ -7,12 +7,13 @@ import { TokenRow } from "@/components/token-row";
 
 interface PortfolioToken {
   symbol: string;
+  address: string;
   balance: string;
   logoURI?: string;
 }
 
 interface PriceData {
-  [symbol: string]: string;
+  [address: string]: string;
 }
 
 export function PortfolioView() {
@@ -31,14 +32,17 @@ export function PortfolioView() {
     refetchInterval: 30_000,
   });
 
+  const addresses = portfolio?.map((t) => t.address) ?? [];
+
   const { data: prices } = useQuery<PriceData>({
-    queryKey: ["prices"],
+    queryKey: ["prices", addresses],
     queryFn: async () => {
-      const res = await fetch("/api/prices", {
+      const res = await fetch(`/api/prices?addresses=${addresses.join(",")}`, {
         headers: { Authorization: `Bearer ${dynamicClient.token}` },
       });
       return res.json();
     },
+    enabled: addresses.length > 0,
     refetchInterval: 30_000,
   });
 
@@ -64,10 +68,10 @@ export function PortfolioView() {
               balance={token.balance}
               icon={token.logoURI}
               usdValue={
-                prices?.[token.symbol]
+                prices?.[token.address]
                   ? (
                       parseFloat(token.balance) *
-                      parseFloat(prices[token.symbol])
+                      parseFloat(prices[token.address])
                     ).toFixed(2)
                   : "—"
               }
