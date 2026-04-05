@@ -85,13 +85,17 @@ export async function GET(request: Request) {
   }
 
   const nonStable = addresses.filter((a) => !STABLECOIN_ADDRESSES.has(a));
-  const settled = await Promise.allSettled(
-    nonStable.map((address) => fetchUniswapPrice(address).then((price) => ({ address, price })))
-  );
 
-  for (const outcome of settled) {
-    if (outcome.status === "fulfilled" && outcome.value.price !== null) {
-      result[outcome.value.address] = outcome.value.price;
+  for (let i = 0; i < nonStable.length; i += 3) {
+    const batch = nonStable.slice(i, i + 3);
+    const [results] = await Promise.all([
+      Promise.allSettled(batch.map((address) => fetchUniswapPrice(address).then((price) => ({ address, price })))),
+      i + 3 < nonStable.length ? new Promise((r) => setTimeout(r, 1000)) : Promise.resolve(),
+    ]);
+    for (const outcome of results) {
+      if (outcome.status === "fulfilled" && outcome.value.price !== null) {
+        result[outcome.value.address] = outcome.value.price;
+      }
     }
   }
 
