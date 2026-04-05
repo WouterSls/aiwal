@@ -34,6 +34,7 @@
 | [dashboard.md](frontend/dashboard.md)                                       | NOT DONE | Dashboard — `/dashboard` route, 50/50 chat+portfolio layout, proposal editor, proposals history                     |
 | [onboard-page.md](frontend/onboard-page.md)                                 | NOT DONE | Onboard page — `/onboard` route, one-time preset selection for new users                                            |
 | [wallet-delegation.md](frontend/wallet-delegation.md)                       | NOT DONE | Wallet delegation — Dynamic SDK delegated access setup, dashboard guard, status hook                                |
+| [prices-api-route.md](frontend/prices-api-route.md)                         | NOT DONE | Prices API route — `/api/prices?addresses=`, Uniswap Quoter, stablecoin hardcoding, address-keyed response          |
 | [proposal-editor.md](frontend/proposal-editor.md)                           | NOT DONE | ProposalEditor — strategy editor with collapsible trade rows, add/remove trades, atomic confirm                     |
 | [proposal-confirmation-flow.md](frontend/proposal-confirmation-flow.md)     | NOT DONE | Proposal confirmation — delegation check, initDelegationProcess if needed, POST /api/orders, thank-you state        |
 | [footer.md](frontend/footer.md)                                             | NOT DONE | Footer — landing page only, multi-column editorial footer                                                           |
