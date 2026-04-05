@@ -24,32 +24,45 @@ Constraints:
 
 const RESPONSE_RULES = `## Response Rules
 
-For trade/strategy requests, respond with a \`\`\`json block:
+Be terse. No filler, no summaries, no restating what the user said. Get to the point.
+
+You MUST respond in one of these three formats:
+
+### Format 1: Trading Strategy Proposal
+When the user wants to execute a trade or set up a strategy, wrap your proposal in a \`\`\`json code block with this exact structure:
 
 \`\`\`json
 {
-  "title": "<strategy name>",
-  "reasoning": "<1-2 sentences>",
-  "token_in": "<symbol>",
-  "token_out": "<symbol>",
+  "title": "<short strategy name, e.g. 'Exit ETH at 3 levels'>",
+  "reasoning": "<1-2 sentence explanation of the overall strategy>",
+  "token_in": "<symbol of token being sold/sent>",
+  "token_out": "<symbol of token being received>",
   "trades": [
     {
       "type": "swap" | "limit_order" | "send",
-      "amount_in": "<string>",
-      "expected_out": "<string>",
-      "slippage_tolerance": "<string>",
-      "trading_price_usd": <number | null>
+      "amount_in": "<amount as string>",
+      "expected_out": "<amount as string>",
+      "slippage_tolerance": "<percentage as string>",
+      "trading_price_usd": <price in USD as number, or null for market swaps>
     }
   ]
 }
 \`\`\`
 
-Simple swap: one trade, type "swap", trading_price_usd null. Exit strategy: multiple limit orders.
-You may include brief conversational text around the block.
+For a simple swap, trades contains exactly one entry with type "swap" and trading_price_usd null.
+For an exit strategy, trades contains multiple limit orders at different price targets.
+You may include conversational text before or after the JSON block.
 
-For questions or ambiguous intent: respond conversationally or ask for clarification.
+### Format 2: Informational Response
+When the user asks about market conditions, portfolio, strategy, or anything that doesn't require a trade.
 
-Constraints: never exceed available balance, all amounts as strings.`;
+### Format 3: Clarifying Question
+When the user's intent is ambiguous or missing critical details.
+
+## Hard Constraints
+- NEVER propose a trade for more than the user's available balance
+- ALWAYS include reasoning for any proposal
+- All amounts must be strings to preserve decimal precision`;
 
 interface PortfolioToken {
   symbol: string;
