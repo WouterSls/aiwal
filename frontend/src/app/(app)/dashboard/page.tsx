@@ -14,6 +14,7 @@ import { ChatPanel, ChatMessage } from "@/components/chat-panel";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ProposalsHistory } from "@/components/proposals-history";
 import { toast } from "sonner";
+import { useConfirmations } from "@/lib/use-confirmations";
 
 export default function DashboardPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -34,6 +35,8 @@ export default function DashboardPage() {
 
   const accounts = getWalletAccounts(dynamicClient);
   const address = accounts[0]?.address;
+
+  useConfirmations(address);
   const checkedRef = useRef(false);
 
   useEffect(() => setMounted(true), []);

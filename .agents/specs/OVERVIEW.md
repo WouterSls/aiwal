@@ -39,6 +39,7 @@
 | [proposal-confirmation-flow.md](frontend/proposal-confirmation-flow.md)     | NOT DONE | Proposal confirmation — delegation check, initDelegationProcess if needed, POST /api/orders, thank-you state        |
 | [footer.md](frontend/footer.md)                                             | NOT DONE | Footer — landing page only, multi-column editorial footer                                                           |
 | [legal-pages.md](frontend/legal-pages.md)                                   | NOT DONE | Legal pages — `/privacy` and `/terms` routes                                                                        |
+| [transaction-confirmations.md](frontend/transaction-confirmations.md)       | NOT DONE | Transaction confirmations — POST endpoint for backend callbacks, polling GET, consume-once toast with BaseScan link  |
 
 ## LLM Context Integration
 
