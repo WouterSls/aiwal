@@ -86,13 +86,15 @@ export default function DashboardPage() {
   function buildCurrentSystemPrompt(): string | null {
     if (!preset || !address) return null;
     const portfolio =
-      queryClient.getQueryData<{ symbol: string; address: string; balance: string }[]>([
-        "portfolio",
-        address,
-      ]) ?? [];
+      queryClient.getQueryData<
+        { symbol: string; address: string; balance: string }[]
+      >(["portfolio", address]) ?? [];
     const portfolioAddresses = portfolio.map((t) => t.address);
     const prices =
-      queryClient.getQueryData<Record<string, string>>(["prices", portfolioAddresses]) ?? {};
+      queryClient.getQueryData<Record<string, string>>([
+        "prices",
+        portfolioAddresses,
+      ]) ?? {};
     const orders =
       queryClient.getQueryData<
         {
@@ -186,6 +188,8 @@ export default function DashboardPage() {
   async function handleConfirm() {
     if (!activeProposal) return;
 
+    await delegate();
+
     const proposal = activeProposal;
     setActiveProposal(null);
     const doneMsg: ChatMessage = {
@@ -251,7 +255,6 @@ export default function DashboardPage() {
       </div>
 
       <ProposalsHistory />
-
     </>
   );
 }
